@@ -5,3 +5,9 @@
 \.conflict\~$
 ^lib/(?!nblibraries.properties$)
 ^debian/changelog$
+^debian/bookjar$
+^debian/files$
+^debian/bookjar\.postinst\.debhelper$
+^debian/bookjar\.substvars$
+^debian/bookjar\.postrm\.debhelper$
+^debian/bookjar\.debhelper\.log$
