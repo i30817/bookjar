@@ -7,7 +7,7 @@ Standards-Version: 3.9.3
 Build-Depends-Indep: openjdk-7-jdk, ant (>=1.8.2~)
 
 Package: bookjar
-Architecture: all
+Architecture: amd64
 Depends: openjdk-7-jre, jarwrapper (>=0.40~)
 Homepage: http://code.google.com/p/bookjar/
 Description: java book reader
