@@ -16,7 +16,6 @@ tar -cjf ../bookjar_${MAJOR_MINOR_FIX}.orig.tar.bz2 --exclude='*build' --exclude
 # otherwise debuild will fail (because it will call gpg, which will
 # try to open a tty). This happens running from a ide
 
-debuild -kC81E6C93
-sudo dpkg -i ../bookjar_${MAJOR_MINOR_FIX}_all.deb
+debuild -S -kC81E6C93
 dput ppa:i30817/bookjar ../bookjar_${MAJOR_MINOR_FIX}_source.changes
 rm ../bookjar_${MAJOR_MINOR_FIX}*
