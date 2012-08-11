@@ -18,5 +18,5 @@ tar -cjf ../bookjar_${MAJOR_MINOR_FIX}.orig.tar.bz2 --exclude='*build' --exclude
 
 debuild -kC81E6C93
 sudo dpkg -i ../bookjar_${MAJOR_MINOR_FIX}_all.deb
-#dput ppa:i30817/bookjar ../bookjar_${MAJOR_MINOR_FIX}_source.changes
+dput ppa:i30817/bookjar ../bookjar_${MAJOR_MINOR_FIX}_source.changes
 rm ../bookjar_${MAJOR_MINOR_FIX}*
