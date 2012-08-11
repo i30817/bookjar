@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- You may freely edit this file. See commented blocks below for -->
+<!-- some examples of how to customize the build. -->
+<!-- (If you delete it and reopen the project it will be recreated.) -->
+<!-- By default, only the Clean and Build commands use this build script. -->
+<!-- Commands such as Run, Debug, and Test only use this build script if -->
+<!-- the Compile on Save feature is turned off for the project. -->
+<!-- You can turn off the Compile on Save (or Deploy on Save) setting -->
+<!-- in the project's Project Properties dialog box.-->
+<project name="bookjar2" default="default" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
+    <description>Builds, tests, and runs the project bookjar2.</description>
+    <import file="nbproject/build-impl.xml"/>
+
+    <!--regenerate the build dependencies unless we are building on the PPA
+    (where the source has to be uploaded with jars because there is no net access)
+    -->
+    <target name="-pre-init" unless="startedOnPPA">
+        <!-- Load dependencies to the project as symlinks -->
+        <ivy:retrieve symlink="true"/>
+    </target>
+
+    <!--used in the rules file to build on the ppa-->
+    <target name="-ppabuild">
+        <property name="startedOnPPA" value="true" />
+    </target>
+    <target name="debjar" depends="-ppabuild, jar">
+        <!--create a single fat jar with all the libs (not even attempting using debian libs) -->
+        <jar destfile="dist/${ant.project.name}-ppa.jar" filesetmanifest="skip">
+            <zipgroupfileset file="dist/${ant.project.name}.jar"/>
+            <zipgroupfileset dir="dist/lib" includes="*.jar" />
+            <manifest>
+                <attribute name="Main-Class" value="${main.class}" />
+            </manifest>
+        </jar>
+    </target>
+
+    <!-- upload to the project ppa -->
+    <condition property="canBuildDeb">
+        <os family="unix" />
+    </condition>
+    <target name="upload" if="canBuildDeb" depends="clean">
+        <!--delete every lib, let ivy:retrieve fetch them from the repositories (local first) -->
+        <delete includeemptydirs="true">
+            <fileset dir="lib">
+                <include name="**/*"/>
+                <exclude name="nblibraries.properties"/>
+            </fileset>
+        </delete>
+        <!--only want jars and real files not symlinks-->
+        <ivy:retrieve type="jar"/>
+
+        <exec executable="debian/package.sh" failonerror="true" >
+            <!--change this minor version when you are ready do do a release-->
+            <arg value="1.8" />
+        </exec>
+    </target>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <!--
+
+    There exist several targets which are by default empty and which can be
+    used for execution of your tasks. These targets are usually executed
+    before and after some main targets. They are:
+
+      -pre-init:                 called before initialization of project properties
+      -post-init:                called after initialization of project properties
+      -pre-compile:              called before javac compilation
+      -post-compile:             called after javac compilation
+      -pre-compile-single:       called before javac compilation of single file
+      -post-compile-single:      called after javac compilation of single file
+      -pre-compile-test:         called before javac compilation of JUnit tests
+      -post-compile-test:        called after javac compilation of JUnit tests
+      -pre-compile-test-single:  called before javac compilation of single JUnit test
+      -post-compile-test-single: called after javac compilation of single JUunit test
+      -pre-jar:                  called before JAR building
+      -post-jar:                 called after JAR building
+      -post-clean:               called after cleaning build products
+
+    (Targets beginning with '-' are not intended to be called on their own.)
+
+    Example of inserting an obfuscator after compilation could look like this:
+
+        <target name="-post-compile">
+            <obfuscate>
+                <fileset dir="${build.classes.dir}"/>
+            </obfuscate>
+        </target>
+
+    For list of available properties check the imported
+    nbproject/build-impl.xml file.
+
+
+    Another way to customize the build is by overriding existing main targets.
+    The targets of interest are:
+
+      -init-macrodef-javac:     defines macro for javac compilation
+      -init-macrodef-junit:     defines macro for junit execution
+      -init-macrodef-debug:     defines macro for class debugging
+      -init-macrodef-java:      defines macro for class execution
+      -do-jar-with-manifest:    JAR building (if you are using a manifest)
+      -do-jar-without-manifest: JAR building (if you are not using a manifest)
+      run:                      execution of project
+      -javadoc-build:           Javadoc generation
+      test-report:              JUnit report generation
+
+    An example of overriding the target for project execution could look like this:
+
+        <target name="run" depends="bookjar2-impl.jar">
+            <exec dir="bin" executable="launcher.exe">
+                <arg file="${dist.jar}"/>
+            </exec>
+        </target>
+
+    Notice that the overridden target depends on the jar target and not only on
+    the compile target as the regular run target does. Again, for a list of available
+    properties which you can use, check the target you are overriding in the
+    nbproject/build-impl.xml file.
+
+    -->
+</project>

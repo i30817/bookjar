@@ -1,0 +1,22 @@
+<ivysettings>
+    <!-- for documentation about this file, see
+    http://ant.apache.org/ivy/history/trunk/settings.html
+    -->
+
+    <settings defaultResolver="default"/>
+    <resolvers>
+        <chain name="public">
+            <!-- This is the default maven 2 repository -->
+            <ibiblio name="m2repo" m2compatible="true" />
+            <ibiblio name="netbeans" root="http://bits.netbeans.org/maven2" m2compatible="true" />
+            <ibiblio name="Nexus Legacy" root="http://repository.ow2.org/nexus/content/repositories/ow2-legacy" m2compatible="true" />
+            <ibiblio name="junrar" root="http://junrar-repository.googlecode.com/svn/deploy" m2compatible="true" />
+            <ibiblio name="eaio" root="http://eaio.com/maven2" m2compatible="true" />
+        </chain>
+    </resolvers>
+
+    <include url="${ivy.default.settings.dir}/ivysettings-shared.xml"/>
+    <include url="${ivy.default.settings.dir}/ivysettings-local.xml"/>
+    <include url="${ivy.default.settings.dir}/ivysettings-main-chain.xml"/>
+    <include url="${ivy.default.settings.dir}/ivysettings-default-chain.xml"/>
+</ivysettings>

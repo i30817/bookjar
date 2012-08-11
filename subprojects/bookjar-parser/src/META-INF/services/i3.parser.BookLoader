@@ -1,0 +1,4 @@
+i3.parser.CompressedLoader
+i3.parser.HtmlLoader
+i3.parser.RtfLoader
+i3.parser.TxtLoader

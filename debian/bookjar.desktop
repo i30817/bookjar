@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Bookjar
+Categories=Utility;TextTools;
+Encoding=UTF-8
+Exec=/usr/bin/bookjar
+TryExec=/usr/share/java/bookjar-ppa.jar
+GenericName=Book Reader
+Comment=Read a book!
+Icon=/usr/share/icons/bookjar.png
+MimeType=text/x-java
+Terminal=false
+Type=Application
+URL=http://code.google.com/p/bookjar/

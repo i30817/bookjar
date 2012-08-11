@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ivy-module version="2.0">
+    <info module="bookjar" organisation="i3" revision="1.0"/>
+    <configurations>
+        <conf name="compile"/>
+        <conf name="runtime"/>
+        <conf name="compile-test"/>
+        <conf name="runtime-test"/>
+    </configurations>
+    <dependencies>
+        <dependency org="junit"                            name="junit"              rev="4.10"  conf="compile-test->master; runtime-test->master" />
+        <dependency org="org.swinglabs.swingx"             name="swingx-common"      rev="1.6.4"        />
+        <dependency org="org.swinglabs.swingx"             name="swingx-core"        rev="1.6.4"        />
+        <dependency org="org.apache.lucene"                name="lucene-core"        rev="2.9.4"        />
+        <dependency org="net.java.dev.glazedlists"         name="glazedlists_java15" rev="1.8.0"        />
+        <dependency org="org.netbeans.external"            name="ValidationAPI"      rev="RELEASE72"    />
+        <dependency org="de.spieleck.app.ngramj"           name="cngram"             rev="1.0-0.060327" />
+        <dependency org="commons-digester"                 name="commons-digester"   rev="2.1"          />
+        <dependency org="org.ccil.cowan.tagsoup"           name="tagsoup"            rev="1.2.1"        />
+        <dependency org="com.eaio.stringsearch"            name="stringsearch"       rev="2"            />
+        <dependency org="com.googlecode.juniversalchardet" name="juniversalchardet"  rev="1.0.3"        />
+        <dependency org="com.github.junrar"                name="junrar"             rev="0.6.1"        />
+        <exclude    org="org.swinglabs.swingx"    module="swingx-autocomplete" />
+        <exclude    org="org.swinglabs.swingx"    module="swingx-action" />
+        <exclude    org="org.swinglabs.swingx"    module="swingx-mavensupport" />
+        <exclude    org="org.swinglabs.swingx"    module="swingx-project" />
+        <exclude    org="org.swinglabs.swingx"    module="metainf-services" />
+        <exclude    org="commons-logging"    module="commons-logging-api" />
+        <exclude    org="org.apache.commons" module="commons-vfs2" />
+    </dependencies>
+</ivy-module>

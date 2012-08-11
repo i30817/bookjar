@@ -1,0 +1,7 @@
+\.orig$
+\.orig\..*$
+\.chg\..*$
+\.rej$
+\.conflict\~$
+^lib/(?!nblibraries.properties$)
+^debian/changelog$
