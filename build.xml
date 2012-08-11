@@ -7,8 +7,8 @@
 <!-- the Compile on Save feature is turned off for the project. -->
 <!-- You can turn off the Compile on Save (or Deploy on Save) setting -->
 <!-- in the project's Project Properties dialog box.-->
-<project name="bookjar2" default="default" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
-    <description>Builds, tests, and runs the project bookjar2.</description>
+<project name="bookjar" default="default" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
+    <description>Builds, tests, and runs the project bookjar.</description>
     <import file="nbproject/build-impl.xml"/>
 
     <!--regenerate the build dependencies unless we are building on the PPA
@@ -19,10 +19,11 @@
         <ivy:retrieve symlink="true"/>
     </target>
 
-    <!--used in the rules file to build on the ppa-->
+    <!--used in the rules file to build on the ppa, guard against using ivy-->
     <target name="-ppabuild">
         <property name="startedOnPPA" value="true" />
     </target>
+    <target name="debclean" depends="-ppabuild, clean" />
     <target name="debjar" depends="-ppabuild, jar">
         <!--create a single fat jar with all the libs (not even attempting using debian libs) -->
         <jar destfile="dist/${ant.project.name}-ppa.jar" filesetmanifest="skip">
@@ -54,19 +55,6 @@
             <arg value="1.8" />
         </exec>
     </target>
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     <!--
