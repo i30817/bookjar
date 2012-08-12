@@ -45,11 +45,12 @@
         <os family="unix" />
     </condition>
     <target name="upload" if="canBuildDeb" depends="clean">
-        <!--delete every lib, let ivy:retrieve fetch them from the repositories (local first) -->
+        <!--delete every lib except the copylibs on, let ivy:retrieve fetch them from the repositories (local first) -->
         <delete includeemptydirs="true">
             <fileset dir="lib">
                 <include name="**/*"/>
                 <exclude name="nblibraries.properties"/>
+                <exclude name="copylibstask.jar"/>
             </fileset>
         </delete>
         <!--only want jars and real files not symlinks-->
