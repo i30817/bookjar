@@ -4,6 +4,6 @@ export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
 %:
 	dh --with javahelper $@
 override_dh_auto_clean:
-	/usr/share/ant/bin/ant debclean
+	ant debclean
 override_dh_auto_build:
-	/usr/share/ant/bin/ant debjar
+	ant debjar
