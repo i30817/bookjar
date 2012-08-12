@@ -26,6 +26,7 @@
     <target name="debclean" depends="-ppabuild, clean" />
     <target name="debjar" depends="-ppabuild, jar">
         <!--create a single fat jar with all the libs (not even attempting using debian libs) -->
+        <echo>CLASSPATH  ${javac.classpath}</echo>
         <jar destfile="${ant.project.name}.jar" filesetmanifest="skip">
             <zipgroupfileset file="dist/${ant.project.name}.jar"/>
             <zipgroupfileset dir="dist/lib" includes="*.jar" />

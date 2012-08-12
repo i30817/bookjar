@@ -2,7 +2,7 @@ Source: bookjar
 Section: text
 Priority: optional
 Maintainer: i30817 <i30817@gmail.com>
-Build-Depends: openjdk-7-jdk, ant, debhelper (>= 7.0.50), javahelper (>=0.32~)
+Build-Depends: openjdk-7-jdk, ant, ant-contrib, debhelper (>= 7.0.50), javahelper (>=0.32~)
 Standards-Version: 3.9.3
 
 Package: bookjar
