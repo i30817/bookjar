@@ -1,6 +1,6 @@
 package i3.util;
 
-import java.util.ArrayList;
+import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
@@ -8,7 +8,6 @@ import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 /**
  * This class is a like LinkedHashSet (insertion order) but it allows querying
@@ -26,18 +25,17 @@ import java.util.Set;
  *
  * @author i30817 <i30817@gmail.com>
  */
-public class LinkedSet<E> implements Set<E> {
+public class LinkedSet<E> extends AbstractSet<E> {
 
     //It holds the linked list
     private Map<E, Node> m = new HashMap<E, Node>();
     //head of that
-    private Node head = new Node();
-    //this is copied to the map value in increments of modulus on set.add
+    protected Node head = new Node();
+    //this is copied to the map value in increments of iteratorAddStep on set.add
     //(which only adds to the end, by insertion indexing)
-    private int monotonicallyIncreasing = 10;
-    //this is used to check need to rebuild the rest of the keys on ListIterator.add
-    //and maintain consistency on the 'containsBefore' and 'containsAfter' calls
-    //(on iterators you can add not to the end - this is a way to amortize that operation)
+    private int monotonicallyIncreasing = 0;
+    //iterator add step may change when doing rebuilds of the 'space' between elements
+    //for the before/after functions on LinkedKeyIterator.add
     private int iteratorAddStep = 10;
     //for fail fast iterators
     private int modCount;
@@ -50,7 +48,7 @@ public class LinkedSet<E> implements Set<E> {
      * @param elem a element of the set
      * @return a ListIterator - doesn't support nextIndex() or previousIndex()
      */
-    public ListIterator<E> from(E elem) {
+    public SetIterator<E> from(E elem) {
         Node e = m.get(elem);
         if (e == null) {
             throw new NoSuchElementException("the given element isn't part of the set");
@@ -59,7 +57,7 @@ public class LinkedSet<E> implements Set<E> {
     }
 
     @Override
-    public Iterator<E> iterator() {
+    public SetIterator<E> iterator() {
         return new LinkedKeyIterator();
     }
 
@@ -203,19 +201,15 @@ public class LinkedSet<E> implements Set<E> {
     }
 
     @Override
-    public boolean removeAll(Collection<?> c) {
-        boolean changed = false;
-        for (Object o : c) {
-            changed |= remove(o);
-        }
-        return changed;
-    }
-
-    @Override
     public void clear() {
         modCount++;
         head.after = head.before = head;
         m.clear();
+    }
+
+    @Override
+    public String toString() {
+        return m.keySet().toString();
     }
 
     //linkedlist node class
@@ -252,7 +246,7 @@ public class LinkedSet<E> implements Set<E> {
         }
     }
 
-    protected class LinkedKeyIterator implements ListIterator<E> {
+    protected class LinkedKeyIterator implements SetIterator<E> {
 
         Node nextEntry;
         Node lastReturned;
@@ -267,7 +261,7 @@ public class LinkedSet<E> implements Set<E> {
         }
 
         public boolean hasPrevious() {
-            return nextEntry != head;
+            return nextEntry.before != head;
         }
 
         public boolean hasNext() {
@@ -291,12 +285,12 @@ public class LinkedSet<E> implements Set<E> {
             if (modCount != expectedModCount) {
                 throw new ConcurrentModificationException();
             }
-            if (nextEntry == head) {
+            if (nextEntry.before == head) {
                 throw new NoSuchElementException();
             }
 
-            Node e = lastReturned = nextEntry;
-            nextEntry = e.before;
+            Node e = lastReturned = nextEntry.before;
+            nextEntry = e;
             return e.key;
         }
 
@@ -308,18 +302,23 @@ public class LinkedSet<E> implements Set<E> {
                 throw new ConcurrentModificationException();
             }
             m.remove(lastReturned.key);
+            nextEntry = lastReturned.after;
             lastReturned.remove();
             lastReturned = null;
             expectedModCount = modCount;
         }
 
         @Override
-        public void set(E e) {
+        public void setOrMove(E e) {
             if (lastReturned == null) {
                 throw new IllegalStateException();
             }
             if (modCount != expectedModCount) {
                 throw new ConcurrentModificationException();
+            }
+            if (lastReturned.key.equals(e)) {
+                //would not change anything
+                return;
             }
             //remove mapping for key since we are changing it
             m.remove(lastReturned.key);
@@ -327,6 +326,10 @@ public class LinkedSet<E> implements Set<E> {
             lastReturned.key = e;
             Node previousKeyOwner = m.put(e, lastReturned);
             if (previousKeyOwner != null) {
+                //as it is a list mutation call, guard against stale iterator
+                if(nextEntry == previousKeyOwner){
+                    nextEntry = nextEntry.after;
+                }
                 previousKeyOwner.remove();
             }
             //from m.remove and m.put, may help with 2 concurrent iterators on this instance
@@ -335,39 +338,36 @@ public class LinkedSet<E> implements Set<E> {
         }
 
         @Override
-        public void add(E e) {
+        public void addOrMove(E e) {
             if (modCount != expectedModCount) {
                 throw new ConcurrentModificationException();
             }
+            //nuke it, as per contract of remove()
+            lastReturned = null;
             //calculate a good relative location, updating subsequent ones if needed
-            int candidateLoc = lastReturned == null ? 1 : lastReturned.relativeLocation + 1;
+            int candidateLoc = nextEntry.before.relativeLocation + 1;
             //opsss, it's full
-            if(candidateLoc == nextEntry.relativeLocation){
+            if (candidateLoc == nextEntry.relativeLocation) {
                 iteratorAddStep *= 1.6;
-                for(Node current = nextEntry; current != head; current = current.after){
+                for (Node current = nextEntry; current != head; current = current.after) {
                     current.relativeLocation = current.relativeLocation + iteratorAddStep;
                 }
             }
 
             Node n = m.get(e);
-            if(n == null){
+            if (n == null) {
                 n = new Node(e, candidateLoc);
-            }else{
+                m.put(e, n);
+            } else {
                 n.relativeLocation = candidateLoc;
+                //as it is a list mutation call, guard against stale iterator
+                if(nextEntry == n){
+                    nextEntry = nextEntry.after;
+                }
                 n.remove();
             }
             n.addBefore(nextEntry);
             expectedModCount = modCount;//add before changes modCount
-        }
-
-        @Override
-        public int nextIndex() {
-            throw new UnsupportedOperationException("Not supported yet.");
-        }
-
-        @Override
-        public int previousIndex() {
-            throw new UnsupportedOperationException("Not supported yet.");
         }
     }
 }
