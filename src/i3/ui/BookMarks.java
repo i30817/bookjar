@@ -64,6 +64,8 @@ import i3.swing.component.FlowPanelBuilder;
 import i3.swing.component.ImageList;
 import i3.swing.component.ListPopupActionWrapper;
 import static i3.thread.Threads.*;
+import i3.util.Factory;
+import i3.util.Iterators;
 
 /**
  * A dictionary that saves locations, indexes, percentage read
@@ -215,7 +217,7 @@ public class BookMarks implements Serializable {
     /**
      * @see ui.Books#remove
      */
-    public void remove(URL key) {
+    public void remove(Iterable<URL> key) {
         books.remove(key);
     }
 
@@ -438,11 +440,17 @@ public class BookMarks implements Serializable {
         }
 
         private void removeInnacessibleFiles() {
-            for (Path p : innacessibleFiles) {
-                bm.remove(IoUtils.toURL(p));
-                Bookjar.log.log(Level.WARNING, "Removed inacessible file {0}", p);
+            if (!innacessibleFiles.isEmpty()) {
+                    bm.remove(Iterators.iterable(innacessibleFiles, new Factory<URL, Path>() {
+                        @Override
+                        public URL create(Path arg) {
+                            return IoUtils.toURL(arg);
+                        }
+                    }));
+                    Bookjar.log.log(Level.WARNING, "Removed inacessible files {0}", innacessibleFiles);
+                    innacessibleFiles.clear();
             }
-            innacessibleFiles.clear();
+
         }
     }
 }

@@ -94,7 +94,9 @@ class Books implements Serializable {
         }
     }
 
-    /**not threadsafe*/
+    /**
+     * not threadsafe
+     */
     private LocalBook removeBook(Path key) {
         for (Iterator<LocalBook> it = eventList.iterator(); it.hasNext();) {
             LocalBook l = it.next();
@@ -146,31 +148,35 @@ class Books implements Serializable {
     /**
      * @ThreadSafe
      */
-    public void remove(URL key) {
-        if (key != null) {
-            Path fileKey = IoUtils.toFile(key);
-            if (fileKey == null) {
-                return;
-            }
-            LocalBook l = null;
+    public void remove(Iterable<URL> keys) {
+        if (keys != null) {
             eventList.getReadWriteLock().writeLock().lock();
             try {
-                l = removeBook(fileKey);
+                for (URL key : keys) {
+                    Path fileKey = IoUtils.toFile(key);
+                    if (fileKey == null) {
+                        return;
+                    }
+                    LocalBook l = null;
+
+
+                    l = removeBook(fileKey);
+                }
             } finally {
                 eventList.getReadWriteLock().writeLock().unlock();
             }
-            removeSingularRecord(l);
+            saveMultipleRecords();
         }
     }
 
     /**
-     * If the key is abstent create a new bookmark,
-     * otherwise use the existing bookmark.
-     * In both cases move the bookmark to the first position
-     * and return it.
+     * If the key is abstent create a new bookmark, otherwise use the existing
+     * bookmark. In both cases move the bookmark to the first position and
+     * return it.
+     *
      * @param key
-     * @return the old bookmark or a new one
-     * with default values if it doesn't exist yet
+     * @return the old bookmark or a new one with default values if it doesn't
+     * exist yet
      * @ThreadSafe
      */
     public LocalBook createIfAbsent(final URL key) {
@@ -192,7 +198,8 @@ class Books implements Serializable {
     }
 
     /**
-     * Completly replace the current bookmark if any
+     * Completely replace the current bookmark if any
+     *
      * @param key
      * @param value
      * @threadSafe
@@ -210,9 +217,10 @@ class Books implements Serializable {
     }
 
     /**
-     * Puts all keys in the bookmarks. If they aren't already
-     * there, it sets the index and percentage read to 0.
-     * Else, it preserves the index and percentage and may move them
+     * Puts all keys in the bookmarks. If they aren't already there, it sets the
+     * index and percentage read to 0. Else, it preserves the index and
+     * percentage and may move them
+     *
      * @param keys
      * @ThreadSafe
      */

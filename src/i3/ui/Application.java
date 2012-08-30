@@ -34,6 +34,9 @@ import i3.swing.component.FlowPanelBuilder;
 import i3.swing.component.FullScreenFrame;
 import i3.swing.component.GlassPane;
 import i3.swing.component.LabelButton;
+import i3.util.Factory;
+import i3.util.Iterators;
+import java.util.Arrays;
 
 public final class Application implements Serializable {
 
@@ -254,7 +257,7 @@ public final class Application implements Serializable {
             startLanguageFinderThread(bookmark);
             return true;
         } catch (IOException excp) {
-            bookList.remove(url);
+            bookList.remove(Arrays.asList(url));
             Bookjar.log.log(Level.WARNING, "Removing bookmark because of IoException while attempting to read it");
         } catch (Exception e) {
             Bookjar.log.log(Level.SEVERE, "Non I/O bug", e);
@@ -458,11 +461,14 @@ public final class Application implements Serializable {
         mainButton.requestFocusInWindow();
     }
 
-    public void removeSelectedBooks() {
+    public void removeSelectedBooks() throws Exception {
         if (bookList.isViewVisible()) {
-            for (LocalBook selected : bookList.getSelected()) {
-                bookList.remove(selected.getURL());
-            }
+            bookList.remove(Iterators.iterable(bookList.getSelected(), new Factory<URL, LocalBook>(){
+                @Override
+                public URL create(LocalBook arg) {
+                    return arg.getURL();
+                }
+            }));
         }
     }
 
