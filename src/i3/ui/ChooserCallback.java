@@ -11,6 +11,7 @@ import i3.util.Strings;
 import i3.io.FileVisitors.ListFileVisitor;
 import i3.io.IoUtils;
 import i3.swing.SwingUtils;
+import java.nio.file.LinkOption;
 
 final class ChooserCallback extends SwingUtils.ChooserCallback<Path, Void> {
 
@@ -33,7 +34,7 @@ final class ChooserCallback extends SwingUtils.ChooserCallback<Path, Void> {
             }
         };
         for (File p : selectedPaths) {
-            Files.walkFileTree(p.toPath(), g);
+            Files.walkFileTree(p.toPath().toRealPath(), g);
         }
         if (!g.paths.isEmpty()) {
             Collections.sort(g.paths, new Comparator<Path>() {
