@@ -19,7 +19,7 @@
         <dependency org="org.ccil.cowan.tagsoup"           name="tagsoup"            rev="1.2.1"        />
         <dependency org="com.eaio.stringsearch"            name="stringsearch"       rev="2"            />
         <dependency org="com.googlecode.juniversalchardet" name="juniversalchardet"  rev="1.0.3"        />
-        <dependency org="com.github.junrar"                name="junrar"             rev="0.6.1"        />
+        <dependency org="com.github.junrar"                name="junrar"             rev="0.7"        />
         <exclude    org="org.swinglabs.swingx"    module="swingx-autocomplete" />
         <exclude    org="org.swinglabs.swingx"    module="swingx-action" />
         <exclude    org="org.swinglabs.swingx"    module="swingx-mavensupport" />
