@@ -45,6 +45,7 @@ public class LabelButton extends JButton {
             setBorder(BorderFactory.createEmptyBorder());
         }
         setFocusPainted(focus);
+        setFocusable(focus);
         setContentAreaFilled(false);
     }
 
