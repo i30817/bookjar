@@ -28,9 +28,8 @@ public class Bookjar implements Runnable {
     public static Handler handle;
 
     private static Path getProgramLocation() {
-
         Path programDir = IoUtils.getApplicationDirectory(Bookjar.class);
-        Path otherDir = programDir.resolve(".bookjar");
+        Path otherDir = programDir.resolve("data");
         try {
             if (Files.exists(otherDir) && Files.isWritable(otherDir) && Files.isDirectory(otherDir)) {
                 return otherDir;
@@ -38,7 +37,7 @@ public class Bookjar implements Runnable {
         } catch (SecurityException ex) {
             log.log(Level.INFO, "Access denied while checking for a mobile write dir");
         }
-        Path stateDir = Paths.get(System.getProperty("user.home"), ".bookjar");
+        Path stateDir = Paths.get(System.getProperty("user.home"), ".config/bookjar");
         if (IoUtils.validateOrCreateDir(stateDir, "Can't get home write dir; trying to create in mobile write dir...")) {
             return stateDir;
         }
