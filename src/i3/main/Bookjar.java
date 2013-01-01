@@ -29,7 +29,7 @@ public class Bookjar implements Runnable {
 
     private static Path getProgramLocation() {
         Path programDir = IoUtils.getApplicationDirectory(Bookjar.class);
-        Path otherDir = programDir.resolve("data");
+        Path otherDir = programDir.resolve("bookjar");
         try {
             if (Files.exists(otherDir) && Files.isWritable(otherDir) && Files.isDirectory(otherDir)) {
                 return otherDir;
