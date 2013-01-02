@@ -10,7 +10,6 @@
             <ibiblio name="m2repo" m2compatible="true" />
             <ibiblio name="netbeans" root="http://bits.netbeans.org/maven2" m2compatible="true" />
             <ibiblio name="Nexus Legacy" root="http://repository.ow2.org/nexus/content/repositories/ow2-legacy" m2compatible="true" />
-            <ibiblio name="junrar" root="http://junrar-repository.googlecode.com/svn/deploy" m2compatible="true" />
             <ibiblio name="eaio" root="http://eaio.com/maven2" m2compatible="true" />
         </chain>
     </resolvers>
