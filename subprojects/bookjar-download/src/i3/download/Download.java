@@ -15,7 +15,7 @@ public final class Download extends Observable {
 
     private volatile StatisticsInputStream stream;
     private volatile State currentState;
-    private Path localFile;
+    private final Path localFile;
     private final URL url;
     public static final Logger log = Logger.getAnonymousLogger();
 
@@ -174,10 +174,10 @@ public final class Download extends Observable {
                     Files.createDirectories(localFile.getParent());
                     //next after start
                     currentState = currentState.next(0L, 0L, size);
-                    writeInto(stream, true, Files.newOutputStream(downloadLocalFile), true, 1024, continuation);
+                    //every 2048 bytes or if the download stalls, a 'new' immutable state will be created
+                    writeInto(stream, true, Files.newOutputStream(downloadLocalFile), true, 2048, continuation);
                 } catch (IOException ex) {
                     cancel(ex);
-                    return;
                 } finally {
                     //if a exception is not thrown this is the end state
                     setChanged();
