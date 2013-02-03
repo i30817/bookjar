@@ -1,4 +1,4 @@
-header = 'bookjar ({latesttag}.{latesttagdistance}) precise; urgency=low\n'
+header = 'bookjar ({latesttag}.{latesttagdistance}) quantal; urgency=low\n'
 changeset = '  * {desc|firstline|strip}\n -- {author|person} <{author|email}>  {date|rfc822date}\n\n'
 start_tags = ' ['
 tag = '{tag}, '
