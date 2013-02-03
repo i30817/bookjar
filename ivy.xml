@@ -9,8 +9,8 @@
     </configurations>
     <dependencies>
         <dependency org="junit"                            name="junit"              rev="4.10"  conf="compile-test->master; runtime-test->master" />
-        <dependency org="org.swinglabs.swingx"             name="swingx-common"      rev="1.6.4"        />
-        <dependency org="org.swinglabs.swingx"             name="swingx-core"        rev="1.6.4"        />
+        <dependency org="org.swinglabs.swingx"             name="swingx-common"      rev="1.6.5"        />
+        <dependency org="org.swinglabs.swingx"             name="swingx-core"        rev="1.6.5"        />
         <dependency org="org.apache.lucene"                name="lucene-core"        rev="2.9.4"        />
         <dependency org="net.java.dev.glazedlists"         name="glazedlists_java15" rev="1.8.0"        />
         <dependency org="org.netbeans.external"            name="ValidationAPI"      rev="RELEASE72"    />
@@ -25,6 +25,7 @@
         <exclude    org="org.swinglabs.swingx"    module="swingx-mavensupport" />
         <exclude    org="org.swinglabs.swingx"    module="swingx-project" />
         <exclude    org="org.swinglabs.swingx"    module="metainf-services" />
+        <exclude    org="org.swinglabs.swingx"    module="swingx-graphics" />   
         <exclude    org="commons-logging"    module="commons-logging-api" />
         <exclude    org="org.apache.commons" module="commons-vfs2" />
     </dependencies>
