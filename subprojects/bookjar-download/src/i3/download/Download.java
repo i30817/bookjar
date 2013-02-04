@@ -174,8 +174,9 @@ public final class Download extends Observable {
                     Files.createDirectories(localFile.getParent());
                     //next after start
                     currentState = currentState.next(0L, 0L, size);
-                    //every 2048 bytes or if the download stalls, a 'new' immutable state will be created
-                    writeInto(stream, true, Files.newOutputStream(downloadLocalFile), true, 2048, continuation);
+                    //every rateOfBytes or if the download stalls, a 'new' immutable state will be created
+                    int rateOfBytes = (int) Math.max(512, size*0.02);
+                    writeInto(stream, true, Files.newOutputStream(downloadLocalFile), true, rateOfBytes, continuation);
                 } catch (IOException ex) {
                     cancel(ex);
                 } finally {
