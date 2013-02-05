@@ -95,6 +95,10 @@ public final class GutenbergSearch implements Closeable {
             try {
                 manager = new SearcherManager(cacheDir, null);
             } catch (IOException ex) {
+                //delete the corrupt index here because we just estabilished there
+                //are no readers (this is needed since IndexWriter blows
+                //up with a tooOldException even if opened only CREATE mode)
+                IoUtils.deleteFileOrDir(dir);
                 return false;
             }
         }
