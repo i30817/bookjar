@@ -1,8 +1,21 @@
 package i3.ui;
 
-import java.awt.image.BufferedImage;
 import i3.download.DownloadState;
 import i3.gutenberg.GutenbergSearch;
+import i3.io.IoUtils;
+import i3.main.Bookjar;
+import i3.main.GutenbergBook;
+import i3.swing.component.ComposedJPopupMenu;
+import i3.swing.component.DownloadsList;
+import i3.swing.component.FlowPanelBuilder;
+import i3.swing.component.ImageList;
+import i3.swing.component.ListPopupActionWrapper;
+import static i3.thread.Threads.*;
+import i3.ui.data.CoverSearchOrRandom;
+import i3.ui.data.RandomImage;
+import i3.ui.data.ReadImageFromCache;
+import i3.util.Factory;
+import i3.util.Strings;
 import java.awt.BorderLayout;
 import java.awt.Desktop;
 import java.awt.FontMetrics;
@@ -10,17 +23,16 @@ import java.awt.SystemColor;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.swing.AbstractAction;
@@ -39,25 +51,11 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.Timer;
-import i3.main.Bookjar;
-import i3.main.GutenbergBook;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.queryParser.ParseException;
-import org.apache.lucene.search.Hit;
-import org.apache.lucene.search.Hits;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.index.CorruptIndexException;
+import org.apache.lucene.queryparser.classic.ParseException;
 import org.jdesktop.swingx.prompt.PromptSupport;
-import i3.ui.data.CoverSearchOrRandom;
-import i3.ui.data.RandomImage;
-import i3.ui.data.ReadImageFromCache;
-import i3.util.Factory;
-import i3.util.Strings;
-import i3.io.IoUtils;
-import i3.swing.component.ComposedJPopupMenu;
-import i3.swing.component.DownloadsList;
-import i3.swing.component.FlowPanelBuilder;
-import i3.swing.component.ImageList;
-import i3.swing.component.ListPopupActionWrapper;
-import static i3.thread.Threads.*;
 
 /**
  *
@@ -67,14 +65,15 @@ public class GutenbergPanel {
 
     public static final int CELL_HEIGHT = 300;
     public static final int CELL_WIDTH = 300;
-    private final Pattern multipleTopic = Pattern.compile("t:([^\\s]*)\\s?");
-    private final Pattern singleTopic = Pattern.compile("t:\"([^\"]*)\"?");
+    private final Pattern singleTopic = Pattern.compile("t:([^\\s]*)\\s?");
+    private final Pattern multipleTopic = Pattern.compile("t:\"([^\"]*)\"?");
     private JPanel view;
     private final JTextField searchText;
     private final DefaultListModel<GutenbergBook> list = new DefaultListModel<>();
     private ImageList<GutenbergBook> imageList;
     private DownloadsList<GutenbergBook> downloads;
-    private final Action reindex, updateList;
+    private final ReindexAction reindex;
+    private final Action updateList;
     private final Path libraryDir;
     private ComboBoxModel<LocaleWrapper> cbModel;
     private String oldSearch = "";
@@ -102,10 +101,6 @@ public class GutenbergPanel {
 
     public boolean isViewVisible() {
         return view != null && view.isShowing();
-    }
-
-    private void startIndexing() {
-        search.startIndexing(view);
     }
 
     public JComponent getView() {
@@ -152,8 +147,8 @@ public class GutenbergPanel {
                 @Override
                 public void addNotify() {
                     super.addNotify();
-                    if (!search.isIndexed()) {
-                        startIndexing();
+                    if (!search.isReady() ) {
+                        search.startThreadedIndex(view);
                     }
                     t.start();
                 }
@@ -315,11 +310,10 @@ public class GutenbergPanel {
         //phrases that contain the english stop words
         //(for ex: the) may cause false positives to fill the cache
         //(for ex: the -> theo)
-        for (String stopWord : StandardAnalyzer.STOP_WORDS) {
-            Pattern p = Pattern.compile("(?:^| )" + stopWord + "(?:$| )", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+        for (Object stopWord : StandardAnalyzer.STOP_WORDS_SET) {
+            Pattern p = Pattern.compile("(?:^| )" + new String((char[])stopWord) + "(?:$| )", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
             currentSearch = p.matcher(currentSearch).replaceAll(" ");
         }
-
         //save/remove the topic metatag if it is found...
         final StringBuilder topicsBuilder = new StringBuilder();
         Factory<String, Matcher> factory = new Factory<String, Matcher>() {
@@ -336,14 +330,14 @@ public class GutenbergPanel {
 //        System.out.println(topicsBuilder);
         final String topics = topicsBuilder.toString().trim();
         final String processedSearch = currentSearch;
+        if (processedSearch.length() < 3 && topics.length() < 3) {
+            return;
+        }
+
         Runnable reFillList = new Runnable() {
             @Override
             public void run() {
                 list.clear();
-                if (processedSearch.length() < 3 && topics.length() < 3) {
-                    return;
-                }
-
                 lastTask = new LuceneQuerySwingWorker(processedSearch, topics, currentLang);
                 lastTask.execute();
             }
@@ -364,8 +358,8 @@ public class GutenbergPanel {
         private final String query, requestedSubjects;
         private final Locale queryLocale;
 
-        public LuceneQuerySwingWorker(String search, String requestedSubjects, Locale queryLocale) {
-            this.query = search;
+        public LuceneQuerySwingWorker(String query, String requestedSubjects, Locale queryLocale) {
+            this.query = query;
             this.queryLocale = queryLocale;
             this.requestedSubjects = requestedSubjects;
         }
@@ -373,23 +367,24 @@ public class GutenbergPanel {
         @Override
         @SuppressWarnings( "unchecked")
         protected List<GutenbergBook> doInBackground() {
-            Hits hits = null;
             try {
-                hits = search.query(query, requestedSubjects, queryLocale);
-                if (hits == null) {
-                    return Collections.emptyList();
-                }
-                Iterator<Hit> result = (Iterator<Hit>) hits.iterator();
-                while (result.hasNext() && !isCancelled()) {
-                    Hit s = result.next();
-                    String titles = s.get("title");
-                    String authors = s.get("creator");
-                    String contributors = s.get("contributor");
-                    String subjects = s.get("subject");
-                    String languages = s.get("language");
-                    String metadata = s.get("metadata");
-                    publish(new GutenbergBook(authors, contributors, titles, languages, subjects, metadata));
-                }
+                GutenbergSearch.SearchCallback callback = new GutenbergSearch.SearchCallback() {
+                    @Override
+                    public boolean shouldContinue(Document doc) {
+                        if (isCancelled()) {
+                            return false;
+                        }
+                        String titles = doc.get("title");
+                        String authors = doc.get("creator");
+                        String contributors = doc.get("contributor");
+                        String subjects = doc.get("subject");
+                        String languages = doc.get("language");
+                        String metadata = doc.get("metadata");
+                        publish(new GutenbergBook(authors, contributors, titles, languages, subjects, metadata));
+                        return true;
+                    }
+                };
+                search.query(query, requestedSubjects, queryLocale, 10000, callback);
             } catch (IOException | ParseException ex) {
                 Bookjar.log.log(Level.SEVERE, "Error querying database: ", ex);
             }
@@ -439,7 +434,7 @@ public class GutenbergPanel {
         }
     }
 
-    private class ReindexAction extends AbstractAction {
+    private class ReindexAction extends AbstractAction implements Runnable {
 
         public ReindexAction(String name) {
             super(name);
@@ -447,7 +442,12 @@ public class GutenbergPanel {
 
         @Override
         public void actionPerformed(ActionEvent e) {
-            startIndexing();
+            search.startThreadedIndex(view);
+        }
+
+        @Override
+        public void run() {
+            search.startThreadedIndex(view);
         }
     }
 

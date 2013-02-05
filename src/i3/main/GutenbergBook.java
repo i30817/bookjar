@@ -134,7 +134,6 @@ public class GutenbergBook implements Book {
             extension = Strings.subStringFromLast(s[2], '.');
             try {
                 url = new URL("http://www.gutenberg.org/dirs/" + s[2]);
-
             } catch (MalformedURLException e) {
                 throw new IllegalArgumentException("corrupted index", e);
             }

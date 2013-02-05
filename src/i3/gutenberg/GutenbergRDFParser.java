@@ -3,6 +3,7 @@ package i3.gutenberg;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -12,6 +13,8 @@ import java.util.Map;
 import org.apache.commons.digester.Digester;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.StoredField;
+import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexWriter;
 import org.xml.sax.SAXException;
@@ -19,11 +22,8 @@ import org.xml.sax.SAXException;
 /**
  * This class parses and stuffs some attributes from the Project Gutenberg RDF
  * file into a Lucene database (backed by SOLR), to allow offline searches of
- * the pg catalog.
- * The attributes are :
- * Authors and Collaborators (searchable)
- * Title (searchable)
- * File extent, mimetype and download link (not searchable)
+ * the pg catalog. The attributes are : Authors and Collaborators (searchable)
+ * Title (searchable) File extent, mimetype and download link (not searchable)
  *
  * It is not thread safe and you can't reuse it, so don't even try. Always new.
  *
@@ -59,16 +59,13 @@ class GutenbergRDFParser {
             //addSetProperty is not working (bug in version 2.1 of digester)
             d.addSetProperties("rdf:RDF/pgterms:etext", "rdf:ID", "id");
             /**
-             * When there are two kinds of tags,
-             * one which is singular ("Literal")
-             * another that holds a collection,
-             * unfortunately, due to the way Digester
-             * works, if one is a prefix of the other,
-             * you will get a duplicate call in the larger string
-             * for the smaller string callback.
-             * In this case the passed strings are null,
-             * and that is the only case that happens, so you
-             * can test and ignore null in a unified callback.
+             * When there are two kinds of tags, one which is singular
+             * ("Literal") another that holds a collection, unfortunately, due
+             * to the way Digester works, if one is a prefix of the other, you
+             * will get a duplicate call in the larger string for the smaller
+             * string callback. In this case the passed strings are null, and
+             * that is the only case that happens, so you can test and ignore
+             * null in a unified callback.
              */
             d.addCallMethod("rdf:RDF/pgterms:etext/dc:creator", "setCreator", 0);
             d.addCallMethod("rdf:RDF/pgterms:etext/dc:creator/rdf:Bag/rdf:li", "setCreator", 0);
@@ -83,10 +80,9 @@ class GutenbergRDFParser {
             d.addCallMethod("rdf:RDF/pgterms:etext/dc:subject/dcterms:LCSH/rdf:value", "setLCSH", 0);
             d.addCallMethod("rdf:RDF/pgterms:etext/dc:subject/rdf:Bag/rdf:li/dcterms:LCSH/rdf:value", "setLCSH", 0);
             /**
-             * If it has the type tag, it
-             * is certainly not a book. However not all not-a-book
-             * have that tag. You need to check the mimetypes in the
-             * download later. Much love to shitty xml (rdf whatever).
+             * If it has the type tag, it is certainly not a book. However not
+             * all not-a-book have that tag. You need to check the mimetypes in
+             * the download later. Much love to shitty xml (rdf whatever).
              */
             d.addCallMethod("rdf:RDF/pgterms:etext/dc:type", "setIsNotBook");
             d.addSetNext("rdf:RDF/pgterms:etext", "saveIfABook");
@@ -142,31 +138,30 @@ class GutenbergRDFParser {
         String subjects = bk.joinSubjects();
         String properties = bestFile.joinProperties();
 //All of these except the title == null and the last two might happen in the corpus
-//                assert (!languages.isEmpty()) : "Added a empty language string, title: "+bk.titles+" id: " + bestFile.id;
-//                assert (!creators.isEmpty()) : " Added a empty creators string, title: "+bk.titles+" id: "+bestFile.id;
-//                assert (title != null) : "Added a null title, id: "+bestFile.id;
-//                assert (!title.isEmpty()) : "Added a empty title, id: "+bestFile.id;
-//                assert (properties.split("\\|").length == 3) : "Added a invalid file, title: "+bk.titles+" id: "+bestFile.id+" properties divided: "+Arrays.toString(properties.split("\\|"));
-//                assert (!properties.split("\\|")[2].equals("null")) : "Added a invalid file, title: "+bk.titles+" id: "+bestFile.id+" properties: "+properties;
+//        assert (!languages.isEmpty()) : "Added a empty language string, title: " + bk.titles + " id: " + bestFile.id;
+//        assert (!creators.isEmpty()) : " Added a empty creators string, title: " + bk.titles + " id: " + bestFile.id;
+//        assert (!title.isEmpty()) : "Added a empty title, id: " + bestFile.id;
+//        assert (title != null) : "Added a null title, id: " + bestFile.id;
+//        assert (properties.split(GutenbergSearch.MULTIPLE_DATA_SEPARATOR).length == 3) : "Added a invalid file, title: " + bk.titles + " id: " + bestFile.id + " properties divided: " + java.util.Arrays.toString(properties.split(GutenbergSearch.MULTIPLE_DATA_SEPARATOR));
+//        assert (!properties.split(GutenbergSearch.MULTIPLE_DATA_SEPARATOR)[2].equals("null")) : "Added a invalid file, title: " + bk.titles + " id: " + bestFile.id + " properties: " + properties;
 
         if (languages.isEmpty() || creators.isEmpty() || title.isEmpty()) {
             return;
         }
 
         Document doc = new Document();
-        doc.add(new Field("title", title, Field.Store.COMPRESS, Field.Index.TOKENIZED));
-        doc.add(new Field("creator", creators, Field.Store.COMPRESS, Field.Index.TOKENIZED));
-        doc.add(new Field("contributor", contributors, Field.Store.COMPRESS, Field.Index.TOKENIZED));
-        doc.add(new Field("subject", subjects, Field.Store.COMPRESS, Field.Index.TOKENIZED));
-        doc.add(new Field("language", languages, Field.Store.COMPRESS, Field.Index.TOKENIZED));
-        doc.add(new Field("metadata", properties, Field.Store.COMPRESS, Field.Index.NO));
+        doc.add(new TextField("title", title, Field.Store.YES));
+        doc.add(new TextField("creator", creators, Field.Store.YES));
+        doc.add(new TextField("contributor", contributors, Field.Store.YES));
+        doc.add(new TextField("subject", subjects, Field.Store.YES));
+        doc.add(new TextField("language", languages, Field.Store.YES));
+        doc.add(new StoredField("metadata", properties));
         index.addDocument(doc);
     }
 
     /**
-     * This class, unlike Book bellow, is short lived.
-     * It is used for Digester to put in properties and to
-     * sort the most relevant file
+     * This class, unlike Book bellow, is short lived. It is used for Digester
+     * to put in properties and to sort the most relevant file
      */
     public static class File implements Comparable<File> {
 

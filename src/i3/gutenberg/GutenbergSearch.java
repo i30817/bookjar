@@ -1,39 +1,45 @@
 package i3.gutenberg;
 
+import i3.io.IoUtils;
+import i3.io.ProgressMonitorStream;
 import i3.main.Bookjar;
+import static i3.thread.Threads.*;
 import java.awt.Component;
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.zip.ZipInputStream;
 import javax.swing.JPanel;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.en.EnglishAnalyzer;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.queryParser.MultiFieldQueryParser;
-import org.apache.lucene.queryParser.ParseException;
-import org.apache.lucene.queryParser.QueryParser;
+import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
+import org.apache.lucene.queryparser.classic.ParseException;
+import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.FilteredQuery;
-import org.apache.lucene.search.Hits;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.QueryWrapperFilter;
-import i3.io.IoUtils;
-import i3.io.ProgressMonitorStream;
-import static i3.thread.Threads.*;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.SearcherManager;
+import org.apache.lucene.search.Sort;
+import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.util.Version;
 
 /**
- * This class is not thread safe. Multiple concurrent
- * instances of it should not be created.
- * @author microbiologia
+ * This class is not thread safe. Multiple concurrent instances of it should not
+ * be created.
+ *
+ * @author i30817
  */
 public final class GutenbergSearch implements Closeable {
 
@@ -42,99 +48,16 @@ public final class GutenbergSearch implements Closeable {
     static {
         System.setProperty("entityExpansionLimit", "1000000");
     }
-    private final Path cacheDir;
-    private final Path lockFile;
     private final ExecutorService discardingSingleThreadIndexer = newFixedDiscardingExecutor("Indexer", 1, true);
-    private volatile IndexWriter indexWriter;
-    private volatile IndexSearcher indexReader;
-
-    /**
-     * The file given must exist and be writable and readable...
-     * @param databaseDir
-     */
-    public GutenbergSearch(Path databaseDir) {
-        cacheDir = databaseDir.resolve("gutenberg");
-        lockFile = databaseDir.resolve("lock");
-        boolean isIndexed = isIndexed();
-        if (!isIndexed) {
-            IoUtils.deleteFileOrDir(cacheDir);
-            IoUtils.deleteFileOrDir(lockFile);
-        }
-    }
-
-    /**
-     * Is the search database ready to search?
-     * @return f the database is ready
-     */
-    public boolean isIndexed() {
-        return Files.exists(cacheDir) && !Files.exists(lockFile);
-    }
-
-    /**
-     * Starts indexing the gutenberg website with JPanel view
-     * as a parent of the progress panel.
-     * If called while it is already indexing the call is ignored.
-     * @param view
-     */
-    public void startIndexing(final JPanel view) {
-        Runnable r = new Runnable() {
-
-            @Override
-            public void run() {
-                try {
-                    prepare(view);
-                } catch (IOException e) {
-                    Bookjar.log.log(Level.WARNING, "Indexing stopped", e);
-                }
-            }
-        };
-        discardingSingleThreadIndexer.execute(r);
-    }
-
-    private void prepare(final Component parent) throws IOException {
-        boolean failed = false;
-        ProgressMonitorStream stream = null;
-        ZipInputStream zp = null;
-        //init the lock
-        Files.createFile(lockFile);
-        try {
-            URL u = new URL("http://www.gutenberg.org/feeds/catalog.rdf.zip");
-//            u = IoUtils.toURL(new File("/home/paulo/Downloads/catalog.rdf.zip"));
-            stream = ProgressMonitorStream.create(u, "Indexing Project Gutenberg", parent);
-            IoUtils.deleteFileOrDir(cacheDir);
-            zp = new ZipInputStream(stream);
-            zp.getNextEntry();
-            writeIndex(zp);
-        } catch (IOException e) {
-            failed = true;
-            throw e;
-        } finally {
-            IoUtils.close(stream, zp);
-            if (failed) {
-                IoUtils.deleteFileOrDir(cacheDir);
-            }
-            //release the lock
-            IoUtils.deleteFileOrDir(lockFile);
-        }
-    }
-
-    private void writeIndex(InputStream xml) throws IOException {
-        try {
-            indexWriter = new IndexWriter(cacheDir.toString(), new StandardAnalyzer(), true);
-            GutenbergRDFParser parser = new GutenbergRDFParser(indexWriter);
-            parser.parse(xml);
-            indexWriter.optimize();
-        } finally {
-            if (indexWriter != null) {
-                indexWriter.close();
-            }
-        }
-    }
+    private final Path dir;
+    private final Directory cacheDir;
+    private volatile SearcherManager manager;
+    private final EnglishAnalyzer englishAnalyzer = new EnglishAnalyzer(Version.LUCENE_41);
 
     @Override
     public void close() throws IOException {
-        if (indexReader != null) {
-            indexReader.close();
+        if (manager != null) {
+            manager.close();
         }
     }
 
@@ -145,27 +68,127 @@ public final class GutenbergSearch implements Closeable {
     }
 
     /**
-     * Query the existing index. The property keys used
-     * are "author & author2 ... & authorN", "title", "language",
-     * and "metadata" that has the mimetype,
-     * extent and url separated by spaces.
-     * @param bookQuery The terms to search books for, can not be null or empty if the subjects are too.
-     * @param subjects the subjects to search in, if null or empty, any subjects permitted.
-     * @param languageLocale the language of the books to search, if null,
-     * any language permitted.
-     * @throws a exception if a error occurred connecting to the database or querying it.
-     * @return the Result.
+     * The file given must exist and be writable and readable...
+     *
+     * @param databaseDir
      */
-    public Hits query(String bookQuery, String subjects, Locale languageLocale) throws IOException, ParseException {
-        boolean indexed = isIndexed();
-        //first time
-        if (indexed && indexReader == null) {
-            indexReader = new IndexSearcher(cacheDir.toString());
+    public GutenbergSearch(Path databaseDir) {
+        Directory tmpDir = null;
+        dir = databaseDir.resolve("gutenberg");
+        try {
+            tmpDir = FSDirectory.open(dir.toFile());
+        } catch (IOException ex) {
+            //if this happens the object is inconsistent and all other public
+            //methods will fail with IOException, except isReady(). Good enough for me.
+            Bookjar.log.log(Level.SEVERE, "Lucene index error, other methods will fail", ex);
         }
-        if (!indexed) {
-            return null;
+        cacheDir = tmpDir;
+    }
+
+    /**
+     * Is the search database ready to search?
+     *
+     * @return if the database is ready
+     */
+    public boolean isReady() {
+        if (manager == null) {
+            try {
+                manager = new SearcherManager(cacheDir, null);
+            } catch (IOException ex) {
+                return false;
+            }
+        }
+        return cacheDir != null && DirectoryReader.indexExists(cacheDir);
+    }
+
+    /**
+     * Starts indexing the Gutenberg web site with JPanel view as a parent of
+     * the progress panel on another thread. If called while it is already
+     * indexing the call is ignored.
+     *
+     * @param view
+     */
+    public void startThreadedIndex(final JPanel view) {
+        if (cacheDir == null) {
+            Bookjar.log.log(Level.SEVERE, "Could not index lucene database due to previous error");
+            return;
         }
 
+        Runnable r = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    prepare(view);
+                    if (manager == null) {
+                        //don't expect a exception here since the index was writen above
+                        manager = new SearcherManager(cacheDir, null);
+                    }
+                    IndexSearcher s = manager.acquire();
+                    try {
+                        //change the reader if the index changed
+                        manager.maybeRefreshBlocking();
+                    } finally {
+                        manager.release(s);
+                    }
+                } catch (IOException e) {
+                    Bookjar.log.log(Level.WARNING, "Indexing interrupted", e);
+                }
+            }
+        };
+        discardingSingleThreadIndexer.execute(r);
+    }
+
+    private void prepare(final Component parent) throws IOException {
+        ProgressMonitorStream stream = null;
+        ZipInputStream zp = null;
+        IndexWriter indexWriter = new IndexWriter(cacheDir,
+                new IndexWriterConfig(Version.LUCENE_41, englishAnalyzer).
+                setOpenMode(IndexWriterConfig.OpenMode.CREATE));
+        try {
+            URL u = new URL("http://www.gutenberg.org/feeds/catalog.rdf.zip");
+//            u = IoUtils.toURL(new File("/home/paulo/Downloads/catalog.rdf.zip"));
+            stream = ProgressMonitorStream.create(u, "Indexing Project Gutenberg", parent);
+            zp = new ZipInputStream(stream);
+            zp.getNextEntry();
+            GutenbergRDFParser parser = new GutenbergRDFParser(indexWriter);
+            parser.parse(zp);
+            indexWriter.close();
+        } catch (IOException ex) {
+            //see IndexWriter javadoc, the second close is needed
+            try {
+                indexWriter.close();
+            } finally {
+                if (IndexWriter.isLocked(cacheDir)) {
+                    IndexWriter.unlock(cacheDir);
+                }
+            }
+            throw ex;
+        } finally {
+            IoUtils.close(stream, zp);
+        }
+    }
+
+    /**
+     * Query the existing index. The property keys used are "author & author2
+     * ... & authorN", "title", "language", and "metadata" that has the
+     * mimetype, extent and url separated by spaces.
+     *
+     * @param bookQuery The terms to search books for, can not be null or empty
+     * if the subjects are too.
+     * @param subjects the subjects to search in, if null or empty, any subjects
+     * permitted.
+     * @param languageLocale the language of the books to search, if null, any
+     * language permitted.
+     * @param maxHits maximum number of returned hits
+     * @param callback a callback to use the returned documents
+     * @throws a exception if a error occurred connecting to the database or
+     * querying it.
+     */
+    public void query(String bookQuery, String subjects, Locale languageLocale, int maxHits, SearchCallback callback) throws IOException, ParseException {
+        if (!isReady()) {
+            Bookjar.log.log(Level.SEVERE, "Could not query lucene database due to previous error");
+            return;
+        }
         //preprocessing
         boolean shouldSearchSubjects = subjects != null && !subjects.isEmpty();
         boolean shouldSearchBooks = bookQuery != null && !bookQuery.isEmpty();
@@ -191,19 +214,21 @@ public final class GutenbergSearch implements Closeable {
         }
 
         if (!shouldSearchSubjects && !shouldSearchBooks) {
-            return null;
+            return;
         }
 
-        Analyzer analyzer = new StandardAnalyzer();
         QueryParser parser = null;
         Query query = null;
         if (shouldSearchBooks) {
-            parser = new MultiFieldQueryParser(new String[]{"title", "creator"}, analyzer);
+            parser = new MultiFieldQueryParser(Version.LUCENE_41, new String[]{"title", "creator"}, englishAnalyzer);
+            parser.setAutoGeneratePhraseQueries(true);
             query = parser.parse(bookQuery);
+//            System.out.println(query.toString()+" | "+bookQuery);
         }
         if (shouldSearchSubjects) {
             if (parser == null) {
-                parser = new QueryParser("subject", analyzer);
+                parser = new QueryParser(Version.LUCENE_41, "subject", englishAnalyzer);
+                parser.setAutoGeneratePhraseQueries(true);
                 query = parser.parse(subjects);
             } else {
                 Filter f = new QueryWrapperFilter(parser.parse("subject:" + subjects));
@@ -217,7 +242,18 @@ public final class GutenbergSearch implements Closeable {
             query = new FilteredQuery(query, f);
         }
 
-        return indexReader.search(query);
+
+        IndexSearcher s = manager.acquire();
+        try {
+            TopDocs docs = s.search(query, null, maxHits, Sort.INDEXORDER, false, false);
+            for (ScoreDoc d : docs.scoreDocs) {
+                if (!callback.shouldContinue(s.doc(d.doc))) {
+                    break;
+                }
+            }
+        } finally {
+            manager.release(s);
+        }
     }
 
     private String lowercaseUserTopicToLuceneTopic(String lowerCaseString) {
@@ -250,5 +286,10 @@ public final class GutenbergSearch implements Closeable {
 //            b.append("*");
 //        }
         return b.toString().trim();
+    }
+
+    public static abstract class SearchCallback {
+
+        public abstract boolean shouldContinue(Document d);
     }
 }
