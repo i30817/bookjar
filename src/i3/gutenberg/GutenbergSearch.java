@@ -16,6 +16,7 @@ import java.util.zip.ZipInputStream;
 import javax.swing.JPanel;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.document.Document;
+import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
@@ -95,10 +96,6 @@ public final class GutenbergSearch implements Closeable {
             try {
                 manager = new SearcherManager(cacheDir, null);
             } catch (IOException ex) {
-                //delete the corrupt index here because we just estabilished there
-                //are no readers (this is needed since IndexWriter blows
-                //up with a tooOldException even if opened only CREATE mode)
-                IoUtils.deleteFileOrDir(dir);
                 return false;
             }
         }
@@ -122,7 +119,16 @@ public final class GutenbergSearch implements Closeable {
             @Override
             public void run() {
                 try {
+                    try{
                     prepare(view);
+                    } catch(CorruptIndexException ex){
+                        Bookjar.log.log(Level.WARNING, "Existing index format was corrupt, deleting index directory before retrying", ex);
+                        //delete the corrupt index here because we just estabilished there are no readers - they'd throw too.
+                        //(this is needed since IndexWriter throws IndexFormatTooOldException even if opened only CREATE mode)
+                        IoUtils.deleteFileOrDir(dir);
+                        //retry
+                        prepare(view);
+                    }
                     if (manager == null) {
                         //don't expect a exception here since the index was writen above
                         manager = new SearcherManager(cacheDir, null);
