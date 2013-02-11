@@ -164,7 +164,7 @@ public final class GutenbergSearch implements Closeable {
             parser.parse(zp);
             indexWriter.close();
         } catch (IOException ex) {
-            //see IndexWriter javadoc, the second close is needed
+            //see IndexWriter.close() javadoc, the second close is needed
             try {
                 indexWriter.close();
             } finally {
@@ -183,12 +183,13 @@ public final class GutenbergSearch implements Closeable {
      * ... & authorN", "title", "language", and "metadata" that has the
      * mimetype, extent and url separated by spaces.
      *
-     * @param bookQuery The terms to search books for, can not be null or empty
-     * if the subjects are too.
-     * @param subjects the subjects to search in, if null or empty, any subjects
-     * permitted.
-     * @param languageLocale the language of the books to search, if null, any
-     * language permitted.
+     * @param bookQuery The terms to search books for, if null or empty nop.
+     * @param subjects the subjects to search
+     * If not null and not empty it will filter the results of bookQuery
+     * except if bookQuery is nop, where it will search subjects instead.
+     * If null or empty, nop (any subject).
+     * @param languageLocale the language of the books to search
+     * If null or Locale.ROOT, nop (any language).
      * @param maxHits maximum number of returned hits
      * @param callback a callback to use the returned documents
      * @throws a exception if a error occurred connecting to the database or
@@ -202,7 +203,7 @@ public final class GutenbergSearch implements Closeable {
         //preprocessing
         boolean shouldSearchSubjects = subjects != null && !subjects.isEmpty();
         boolean shouldSearchBooks = bookQuery != null && !bookQuery.isEmpty();
-        boolean shouldSearchLanguage = languageLocale != null;
+        boolean shouldSearchLanguage = languageLocale != Locale.ROOT && languageLocale != null;
         if (shouldSearchLanguage) {
             if (shouldSearchBooks) {
                 bookQuery = bookQuery.toLowerCase(languageLocale);
@@ -246,7 +247,7 @@ public final class GutenbergSearch implements Closeable {
             }
         }
 
-        if (languageLocale != null) {
+        if (shouldSearchLanguage) {
             String filterLanguage = languageLocale.getLanguage();
             Filter f = new QueryWrapperFilter(parser.parse("language:" + filterLanguage));
             query = new FilteredQuery(query, f);

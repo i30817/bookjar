@@ -17,6 +17,7 @@ import i3.ui.data.ReadImageFromCache;
 import i3.util.Factory;
 import i3.util.Strings;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.FontMetrics;
 import java.awt.SystemColor;
@@ -26,7 +27,9 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -44,16 +47,18 @@ import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
+import javax.swing.ListCellRenderer;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.Timer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.jdesktop.swingx.prompt.PromptSupport;
 
@@ -75,7 +80,7 @@ public class GutenbergPanel {
     private final ReindexAction reindex;
     private final Action updateList;
     private final Path libraryDir;
-    private ComboBoxModel<LocaleWrapper> cbModel;
+    private ComboBoxModel<Locale> cbModel;
     private String oldSearch = "";
     private Locale oldLanguage;
     private final GutenbergSearch search;
@@ -116,14 +121,26 @@ public class GutenbergPanel {
             //bug in tooltips hack inside the Imagelist forces me to this.
             searchText.setToolTipText(null);
             f.add(searchText, FlowPanelBuilder.SizeConfig.FillSize);
-            Set<LocaleWrapper> set = new TreeSet<>();
-            for (Locale l : Locale.getAvailableLocales()) {
-                set.add(new LocaleWrapper(l));
-            }
-            LocaleWrapper any = new LocaleWrapper();
-            set.add(any);
-            cbModel = new DefaultComboBoxModel<>(set.toArray(new LocaleWrapper[set.size()]));
-            JComboBox<LocaleWrapper> box = new JComboBox<>(cbModel);
+            Set<Locale> set = new TreeSet<>(new Comparator<Locale>() {
+                @Override
+                public int compare(Locale o1, Locale o2) {
+                    return Strings.compareNatural(o1.getDisplayLanguage(), o2.getDisplayLanguage());
+                }
+            });
+            set.addAll(Arrays.asList(Locale.getAvailableLocales()));
+            set.add(Locale.ROOT);
+            cbModel = new DefaultComboBoxModel<>(set.toArray(new Locale[set.size()]));
+            final JComboBox<Locale> box = new JComboBox<>(cbModel);
+            box.setRenderer(new ListCellRenderer<Locale>() {
+                ListCellRenderer<? super Locale> defaultRend = box.getRenderer();
+                @Override
+                public Component getListCellRendererComponent(JList<? extends Locale> list, Locale value, int index, boolean isSelected, boolean cellHasFocus) {
+                    JLabel cell = (JLabel)defaultRend.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                    cell.setText(value == Locale.ROOT ? "any language" : value.getDisplayLanguage());
+                    return cell;
+                }
+            });
+
             box.setAction(updateList);
             f.add(box, FlowPanelBuilder.SizeConfig.PreferredSize);
             f.add(new JButton(reindex), FlowPanelBuilder.SizeConfig.FillSize);
@@ -174,60 +191,6 @@ public class GutenbergPanel {
             }
         }
         return view;
-    }
-
-    private static class LocaleWrapper implements Comparable<LocaleWrapper> {
-
-        Locale l;
-
-        @Override
-        public boolean equals(Object obj) {
-            if (!(obj instanceof LocaleWrapper)) {
-                return false;
-            }
-            LocaleWrapper w = (LocaleWrapper) obj;
-            Locale locale = w.getLocale();
-            Locale current = getLocale();
-            if (locale == null || current == null) {
-                return locale == current;
-            }
-
-            return current.getDisplayLanguage().equals(locale.getDisplayLanguage());
-        }
-
-        @Override
-        public int hashCode() {
-            return l.getDisplayLanguage().hashCode();
-        }
-
-        public LocaleWrapper(Locale l) {
-            this.l = l;
-        }
-
-        public LocaleWrapper() {
-            this.l = Locale.ROOT;
-        }
-
-        public Locale getLocale() {
-            return l == Locale.ROOT ? null : l;
-        }
-
-        @Override
-        public String toString() {
-            return l == Locale.ROOT ? "any language" : l.getDisplayLanguage();
-        }
-
-        @Override
-        public int compareTo(LocaleWrapper o) {
-            Locale other = o.getLocale();
-            if (other == null) {
-                return -1;
-            }
-            String thisLanguage = l.getDisplayLanguage();
-            String otherLanguage = other.getDisplayLanguage();
-
-            return Strings.compareNatural(thisLanguage, otherLanguage);
-        }
     }
 
     private static class RenderGutenberg implements ImageList.RenderValues<GutenbergBook> {
@@ -296,8 +259,7 @@ public class GutenbergPanel {
     private void updateList() {
         assert (SwingUtilities.isEventDispatchThread()) : "Why are you not calling this from the EDT!!!";
         String currentSearch = searchText.getText();
-        LocaleWrapper lw = (LocaleWrapper) cbModel.getSelectedItem();
-        final Locale currentLang = lw.getLocale();
+        final Locale currentLang = (Locale) cbModel.getSelectedItem();
 
         //only do it if something changed since the last time this was invoked...
         if (currentSearch.equals(oldSearch) && currentLang == oldLanguage) {
