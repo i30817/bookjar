@@ -1,11 +1,11 @@
 package i3.main;
 
 import i3.gutenberg.GutenbergSearch;
-import java.net.MalformedURLException;
-import java.net.URL;
 import i3.util.Iterators;
 import i3.util.Strings;
 import i3.util.Tuples;
+import java.net.MalformedURLException;
+import java.net.URL;
 
 public class GutenbergBook implements Book {
 
@@ -184,5 +184,10 @@ public class GutenbergBook implements Book {
         }
         normalizeString.append(authorString.substring(seperator + 2)).append(' ');
         exchangeNamesAux(authorString.substring(0, seperator));
+    }
+
+    @Override
+    public String toString(){
+        return getPartialName(" & ", " - ");
     }
 }

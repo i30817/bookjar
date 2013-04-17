@@ -2,15 +2,11 @@
  */
 package i3.util;
 
-import java.util.Arrays;
-import java.util.Set;
-import java.util.TreeSet;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 /**
  *
