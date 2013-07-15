@@ -11,7 +11,6 @@ import i3.util.Strings;
 import i3.io.FileVisitors.ListFileVisitor;
 import i3.io.IoUtils;
 import i3.swing.SwingUtils;
-import java.nio.file.LinkOption;
 
 final class ChooserCallback extends SwingUtils.ChooserCallback<Path, Void> {
 
@@ -51,14 +50,13 @@ final class ChooserCallback extends SwingUtils.ChooserCallback<Path, Void> {
 
     @Override
     protected void done(Path first) {
-        if (!selectedPaths.isEmpty()) {
-            //save for next execution
-            Application.app.chooserStartFile = selectedPaths.iterator().next();
-        }
-        if (first == null) {
-            Application.app.showList(true);
-        } else {
+        //save for next execution
+        Application.app.chooserStartFile = selectedPaths.iterator().next();
+        //only show if the original start path is not a dir and there was only 1 file
+        if (first != null && !Application.app.chooserStartFile.isDirectory()) {
             Application.app.read(IoUtils.toURL(first));
+        } else {
+            Application.app.showList(true);
         }
     }
 
