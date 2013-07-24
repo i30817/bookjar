@@ -19,6 +19,15 @@
         <ivy:retrieve symlink="true"/>
     </target>
 
+    <!-- but if we are doing the clean, delete everything on the libs dir (except the library list file) -->
+    <target name="-post-clean" unless="startedOnPPA">
+        <delete includeemptydirs="true">
+            <fileset dir="${basedir}/lib">
+                <exclude name="nblibraries.properties"/>
+            </fileset>
+        </delete> 
+    </target>
+
     <!--used in the rules file to build on the ppa, guard against using ivy-->
     <target name="-ppabuild">
         <property name="startedOnPPA" value="true" />
