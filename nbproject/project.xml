@@ -32,7 +32,7 @@
                 <id>jar</id>
             </reference>
             <reference>
-                <foreign-project>bookjar-notifications-nbport</foreign-project>
+                <foreign-project>bookjar-notifications</foreign-project>
                 <artifact-type>jar</artifact-type>
                 <script>build.xml</script>
                 <target>jar</target>

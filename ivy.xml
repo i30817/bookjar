@@ -16,10 +16,10 @@
         <dependency org="org.apache.lucene"                name="lucene-analyzers-common" rev="4.1.0"   />
         <dependency org="net.java.dev.glazedlists"         name="glazedlists_java15" rev="1.9.0"        />    
 <!--    
-        <dependency org="org.netbeans.api"                 name="org-openide-awt"      rev="RELEASE80-BETA"    />
         <dependency org="org.netbeans.external"            name="ValidationAPI"      rev="RELEASE80-BETA"    />-
         <dependency org="org.netbeans.modules"             name="org-netbeans-modules-notifications"      rev="RELEASE80-BETA"    />
 -->
+        <dependency org="org.netbeans.api"                 name="org-openide-util"   rev="RELEASE80-BETA"/>
         <dependency org="com.kenai"                        name="simplevalidation"   rev="1.5"    />     
         <dependency org="de.spieleck.app.ngramj"           name="cngram"             rev="1.0-0.060327" />
         <dependency org="commons-digester"                 name="commons-digester"   rev="2.1"          />
