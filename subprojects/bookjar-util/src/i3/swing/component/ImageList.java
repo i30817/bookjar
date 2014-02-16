@@ -1,5 +1,6 @@
 package i3.swing.component;
 
+import i3.image.GlowFilter;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
@@ -42,13 +43,13 @@ import javax.swing.ActionMap;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
-import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JScrollPane;
 import javax.swing.JToolTip;
 import javax.swing.JViewport;
+import javax.swing.KeyStroke;
 import javax.swing.ListCellRenderer;
 import javax.swing.ListModel;
 import javax.swing.ListSelectionModel;
@@ -59,29 +60,23 @@ import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import i3.image.GlowFilter;
 
 /**
- * This image list requests images in
- * a interface that can be asynchronous.
+ * This image list requests images in a interface that can be asynchronous.
  *
- * All images have a in memory cache in this
- * class, but only a limited number will be on
- * at a time, so you should use a secondary image
- * disk cache. When this needs a image it requests
- * it in RenderValues.getCellImage and you should
- * return it in ImageList.returnImage. If you don't,
- * it will never ask again. To request to try again
- * at a later time use ImageList.deferImage.
+ * All images have a in memory cache in this class, but only a limited number
+ * will be on at a time, so you should use a secondary image disk cache. When
+ * this needs a image it requests it in RenderValues.getCellImage and you should
+ * return it in ImageList.returnImage. If you don't, it will never ask again. To
+ * request to try again at a later time use ImageList.deferImage.
  *
- * All images are removed on removeNotify, and the not
- * displayed ones are regularly removed on a variable
- * number of requests relating to the screen
+ * All images are removed on removeNotify, and the not displayed ones are
+ * regularly removed on a variable number of requests relating to the screen
  * resolution (minimum) and requested again when needed.
  *
- * To ask if the list is at the right place to display
- * a Image for a Object use isObjectVisible()
- * (for async loading), no need to call it on the EDT.
+ * To ask if the list is at the right place to display a Image for a Object use
+ * isObjectVisible() (for async loading), no need to call it on the EDT.
+ *
  * @author Owner
  */
 public final class ImageList<E> {
@@ -96,9 +91,10 @@ public final class ImageList<E> {
     private final Map<E, BufferedImage> memoryCache = new IdentityHashMap<>();
 
     /**
-     * Use this to make the image list retry the request
-     * for the Image for this value at a later date (inside a RenderValues impl)
-     * if already requested and its if not needed now
+     * Use this to make the image list retry the request for the Image for this
+     * value at a later date (inside a RenderValues impl) if already requested
+     * and its if not needed now
+     *
      * @param valueAsKey
      * @throws IllegalArgumentException if valueAsKey is null.
      */
@@ -120,7 +116,9 @@ public final class ImageList<E> {
     }
 
     /**
-     * Use this to put a image into a cell of the list (inside a RenderValues impl).
+     * Use this to put a image into a cell of the list (inside a RenderValues
+     * impl).
+     *
      * @param valueAsKey
      * @param image
      * @throws IllegalArgumentException if a argument is null.
@@ -152,7 +150,8 @@ public final class ImageList<E> {
     }
 
     /**
-     * @return the object at a given ImageList point, if any. Otherwise return null.
+     * @return the object at a given ImageList point, if any. Otherwise return
+     * null.
      */
     public E locationToObject(Point location) {
         assert SwingUtilities.isEventDispatchThread() : "Not in EDT";
@@ -165,56 +164,42 @@ public final class ImageList<E> {
     }
 
     /**
-     * @return the objects that are currently selected
-     * return a empty array if nothing is selected
+     * @return the objects that are currently selected return a empty array if
+     * nothing is selected
      */
     public List<E> getSelectedObjects() {
         assert SwingUtilities.isEventDispatchThread() : "Not in EDT";
         return list.getSelectedValuesList();
     }
 
-    public void ensureSelectedIsVisible(){
+    public void ensureSelectedIsVisible() {
         assert SwingUtilities.isEventDispatchThread() : "Not in EDT";
         int i = list.getSelectedIndex();
-        if(i != -1){
+        if (i != -1) {
             list.ensureIndexIsVisible(i);
         }
     }
 
     /**
-     * {@link  javax.swing.JList#addMouseListener(MouseListener listener) view class method}
+     * A action listener added through this method will bind the action to both
+     * double-clicks on the list and enter key
      */
-    public void addMouseListener(MouseListener listener) {
+    public void setAction(final Action listener) {
         assert SwingUtilities.isEventDispatchThread() : "Not in EDT";
-        list.addMouseListener(listener);
-    }
-
-    /**
-     * {@link  javax.swing.JList#removeMouseListener(MouseListener listener) view class method}
-     */
-    public void removeMouseListener(MouseListener listener) {
-        assert SwingUtilities.isEventDispatchThread() : "Not in EDT";
-        list.removeMouseListener(listener);
-    }
-
-    /**
-     * {@link  javax.swing.JList#getInputMap() view class method}
-     */
-    public InputMap getInputMap() {
-        assert SwingUtilities.isEventDispatchThread() : "Not in EDT";
-        return list.getInputMap();
-    }
-
-    /**
-     * {@link  javax.swing.JList#getActionMap() view class method}
-     */
-    public ActionMap getActionMap() {
-        assert SwingUtilities.isEventDispatchThread() : "Not in EDT";
-        return list.getActionMap();
+        list.addMouseListener(new MouseAdapter() {
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2 && listener.isEnabled()) {
+                    listener.actionPerformed(new ActionEvent(list, ActionEvent.ACTION_PERFORMED, null, e.getWhen(), e.getModifiers()));
+                }
+            }
+        });
+        list.getInputMap().put(KeyStroke.getKeyStroke("pressed ENTER"), "click");
+        list.getActionMap().put("click", listener);
     }
 
     /**
      * Returns if the list object is not visible in the viewport
+     *
      * @param obj
      * @return
      */
@@ -253,22 +238,22 @@ public final class ImageList<E> {
     }
 
     /**
-     * As images are a heavyweight object ImageList has a lazy
-     * strategy to create and dispose them after use. To implement
-     * this optimally, the getCellImage method can offload image
-     * creation to another thread, if it needs to be loaded -
-     * images are returned by calling ImageList.returnImage(Object value, Image).
-     * If you don't call it, images are assumed not to exist for the index,
-     * as if you call it with a null image.
+     * As images are a heavyweight object ImageList has a lazy strategy to
+     * create and dispose them after use. To implement this optimally, the
+     * getCellImage method can offload image creation to another thread, if it
+     * needs to be loaded - images are returned by calling
+     * ImageList.returnImage(Object value, Image). If you don't call it, images
+     * are assumed not to exist for the index, as if you call it with a null
+     * image.
      */
     public interface RenderValues<E> {
 
         /**
          * Given a list object value and desired width and height give a
-         * appropriate image. This method has to call returnImage(Object value, Image)
-         * (can be called in another thread). If you offload image loading
-         * to a thread call returnImage in the thread after loading.
-         * If you don't want to offload image loading read the image and then call
+         * appropriate image. This method has to call returnImage(Object value,
+         * Image) (can be called in another thread). If you offload image
+         * loading to a thread call returnImage in the thread after loading. If
+         * you don't want to offload image loading read the image and then call
          * returnImage directly.
          *
          * @param obj not null
@@ -278,16 +263,17 @@ public final class ImageList<E> {
         void requestCellImage(ImageList<E> list, E obj, int imageWidth, int imageHeight);
 
         /**
-         * Given a list object and desired width and height give a
-         * appropriate cell text.
+         * Given a list object and desired width and height give a appropriate
+         * cell text.
+         *
          * @param obj not null
          * @return cell text
          */
         String getCellText(ImageList<E> list, E obj);
 
         /**
-         * Given a list object and desired cell give a
-         * appropriate tooltip text.
+         * Given a list object and desired cell give a appropriate tooltip text.
+         *
          * @param obj not null
          * @param tooltipFont the tooltip FontMetrics
          * @return cell tooltip text
@@ -296,9 +282,8 @@ public final class ImageList<E> {
     }
 
     /**
-     * To display the image list. If you want
-     * the scrollbar elsewhere use the getVerticalScrollBar()
-     * method.
+     * To display the image list. If you want the scrollbar elsewhere use the
+     * getVerticalScrollBar() method.
      */
     public JComponent getView() {
         return layer;
@@ -464,7 +449,8 @@ public final class ImageList<E> {
         }
 
         /**
-         * Listener for events that augment the tooltip manager functionality on JList
+         * Listener for events that augment the tooltip manager functionality on
+         * JList
          */
         private final class TooltipManagerJListDispatcher implements HierarchyListener, WindowFocusListener, FocusListener, ListSelectionListener, MouseListener, MouseWheelListener {
 
@@ -580,7 +566,8 @@ public final class ImageList<E> {
         }
 
         /**
-         * Translator for passing events from the tooltip to eventually the tooltipmanager
+         * Translator for passing events from the tooltip to eventually the
+         * tooltipmanager
          */
         private final class TooltipMouseDispatcher implements MouseListener, MouseWheelListener, MouseMotionListener {
 
@@ -705,7 +692,7 @@ public final class ImageList<E> {
         @SuppressWarnings("unchecked") //just to use the same list
         private void disposeInvisibleImages(JList list) {
             int firstIndex = Math.max(0, list.getFirstVisibleIndex() - 10);
-            int lastIndex =  Math.min(list.getModel().getSize()-1, list.getLastVisibleIndex() + 10);
+            int lastIndex = Math.min(list.getModel().getSize() - 1, list.getLastVisibleIndex() + 10);
             //A direct index mapping wouldn't work since listmodel can be mutable
             List tmp = new ArrayList();
             ListModel model = list.getModel();
@@ -762,8 +749,9 @@ public final class ImageList<E> {
     }
 
     /**
-     * A viewport layout that tries to horizontally center a component in
-     * the viewport.
+     * A viewport layout that tries to horizontally center a component in the
+     * viewport.
+     *
      * @author i30817
      */
     private static final class CenteredViewPortLayout implements LayoutManager {
@@ -812,9 +800,8 @@ public final class ImageList<E> {
             maximumViewSize.width -= pane.getVerticalScrollBar().getWidth();
             Dimension newViewSize = getCellRowDimension(view, maximumViewSize);
             int justifiedStartX = (maximumViewSize.width - newViewSize.width) / 2;
-            /**_________     __________
-             * ||YYY|XX|  -> |X|YYYY|X|
-             * ||YYY|XX|     |X|YYYY|X|
+            /**
+             * _________ __________ ||YYY|XX| -> |X|YYYY|X| ||YYY|XX| |X|YYYY|X|
              */
 //            pane.setBackground(Color.CYAN);
 //            port.setBackground(Color.MAGENTA);
@@ -830,9 +817,8 @@ public final class ImageList<E> {
             Dimension newViewSize = view.getPreferredSize();
 
             /**
-             * If a JList the preferred size is the preferred size of the
-             * sum of cells fitting in a row.
-             * Also, the limit is the number of cells.
+             * If a JList the preferred size is the preferred size of the sum of
+             * cells fitting in a row. Also, the limit is the number of cells.
              */
             if (view instanceof JList) {
                 int fixedCellWidth = ((JList) view).getFixedCellWidth();
@@ -841,9 +827,9 @@ public final class ImageList<E> {
                     newViewSize.width = fixedCellWidth;
                 }
                 /**
-                 * Multiply the cell width until it matches the
-                 * n * viewPreferredSize.width + z = viewPort.width
-                 * for a z < preferredSize and n <= expandLimit
+                 * Multiply the cell width until it matches the n *
+                 * viewPreferredSize.width + z = viewPort.width for a z <
+                 * preferredSize and n <= expandLimit
                  */
                 int cellsInRow = maximumViewSize.width / newViewSize.width;
                 if (cellsInRow > cellNumber) {

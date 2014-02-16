@@ -19,8 +19,7 @@ import javax.swing.KeyStroke;
 public class KeyCapturer extends JTextField {
 
     /**
-     * Field used to listen to property changed events refering to changed
-     * captured keys.
+     * Field used to listen to property changed events from changed captured keys.
      **/
     public static final String CAPTURED_KEYSTROKE = "Captured a keyStroke";
     private KeyStroke capturedKeyStroke;

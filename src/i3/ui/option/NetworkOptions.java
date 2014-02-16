@@ -31,7 +31,7 @@ public class NetworkOptions extends JPanel {
     /** Creates new form AuthentificationPanel
      *  This class fills a AuthentificationProxySelector.
      *  If the current ProxySelector is already an AuthentificationProxySelector
-     *  it clones it. Its the calling class responsability to install it.
+     *  it clones it. Its the calling class responsibility to install it.
      */
     public NetworkOptions(AuthentificationProxySelector proxySelector) {
         super();

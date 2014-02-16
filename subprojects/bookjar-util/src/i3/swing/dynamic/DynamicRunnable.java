@@ -3,7 +3,7 @@ package i3.swing.dynamic;
 import java.util.Objects;
 
 /**
- * All provided arguments are 'frozen'
+ * All provided arguments are hard-referenced inside the runnable
  *
  * You can't use null as 'arguments', since they
  * don't allow class information to be gleaned

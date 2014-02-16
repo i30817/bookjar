@@ -80,7 +80,7 @@
 
       <Layout class="org.netbeans.modules.form.compat2.layouts.support.JTabbedPaneSupportLayout"/>
       <SubComponents>
-        <Component class="i3.ui.options.ColorOptions" name="colorOptions">
+        <Component class="i3.ui.option.ColorOptions" name="colorOptions">
           <Constraints>
             <Constraint layoutClass="org.netbeans.modules.form.compat2.layouts.support.JTabbedPaneSupportLayout" value="org.netbeans.modules.form.compat2.layouts.support.JTabbedPaneSupportLayout$JTabbedPaneConstraintsDescription">
               <JTabbedPaneConstraints tabName="Colors">
@@ -89,7 +89,7 @@
             </Constraint>
           </Constraints>
         </Component>
-        <Component class="i3.ui.options.BooleanOptions" name="booleanOptions">
+        <Component class="i3.ui.option.BooleanOptions" name="booleanOptions">
           <Constraints>
             <Constraint layoutClass="org.netbeans.modules.form.compat2.layouts.support.JTabbedPaneSupportLayout" value="org.netbeans.modules.form.compat2.layouts.support.JTabbedPaneSupportLayout$JTabbedPaneConstraintsDescription">
               <JTabbedPaneConstraints tabName="Visibility">
@@ -98,7 +98,7 @@
             </Constraint>
           </Constraints>
         </Component>
-        <Component class="i3.ui.options.ObjectOptions" name="objectOptions">
+        <Component class="i3.ui.option.ObjectOptions" name="objectOptions">
           <Constraints>
             <Constraint layoutClass="org.netbeans.modules.form.compat2.layouts.support.JTabbedPaneSupportLayout" value="org.netbeans.modules.form.compat2.layouts.support.JTabbedPaneSupportLayout$JTabbedPaneConstraintsDescription">
               <JTabbedPaneConstraints tabName="Looks">
@@ -107,7 +107,7 @@
             </Constraint>
           </Constraints>
         </Component>
-        <Component class="i3.ui.options.ShortcutOptions" name="shortcutOptions">
+        <Component class="i3.ui.option.ShortcutOptions" name="shortcutOptions">
           <AuxValues>
             <AuxValue name="JavaCodeGenerator_CreateCodeCustom" type="java.lang.String" value="new ShortcutOptions(&quot;Press button to set the &quot;, &quot; shortcut.&quot;)"/>
             <AuxValue name="JavaCodeGenerator_TypeParameters" type="java.lang.String" value=""/>
@@ -122,14 +122,14 @@
         </Component>
       </SubComponents>
     </Container>
-    <Component class="i3.ui.options.Preview" name="preview1">
+    <Component class="i3.ui.option.Preview" name="preview1">
       <Properties>
         <Property name="minimumSize" type="java.awt.Dimension" editor="org.netbeans.beaninfo.editors.DimensionEditor">
           <Dimension value="[0, 0]"/>
         </Property>
       </Properties>
       <AuxValues>
-        <AuxValue name="JavaCodeGenerator_CreateCodeCustom" type="java.lang.String" value="new i3.ui.options.Preview(preview.getView());"/>
+        <AuxValue name="JavaCodeGenerator_CreateCodeCustom" type="java.lang.String" value="new i3.ui.option.Preview(preview.getView());"/>
       </AuxValues>
     </Component>
   </SubComponents>

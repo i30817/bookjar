@@ -22,10 +22,9 @@ import java.awt.Desktop;
 import java.awt.FontMetrics;
 import java.awt.SystemColor;
 import java.awt.event.ActionEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
@@ -79,7 +78,6 @@ public class GutenbergPanel {
     private DownloadsList<GutenbergBook> downloads;
     private final ReindexAction reindex;
     private final Action updateList;
-    private final Path libraryDir;
     private ComboBoxModel<Locale> cbModel;
     private String oldSearch = "";
     private Locale oldLanguage;
@@ -88,7 +86,6 @@ public class GutenbergPanel {
 
     public GutenbergPanel() {
         Path appDir = Bookjar.programLocation;
-        libraryDir = appDir.resolve("library");
         search = new GutenbergSearch(appDir);
         reindex = new ReindexAction("Update");
         updateList = new UpdateList();
@@ -133,9 +130,10 @@ public class GutenbergPanel {
             final JComboBox<Locale> box = new JComboBox<>(cbModel);
             box.setRenderer(new ListCellRenderer<Locale>() {
                 ListCellRenderer<? super Locale> defaultRend = box.getRenderer();
+
                 @Override
                 public Component getListCellRendererComponent(JList<? extends Locale> list, Locale value, int index, boolean isSelected, boolean cellHasFocus) {
-                    JLabel cell = (JLabel)defaultRend.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                    JLabel cell = (JLabel) defaultRend.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                     cell.setText(value == Locale.ROOT ? "any language" : value.getDisplayLanguage());
                     return cell;
                 }
@@ -150,7 +148,7 @@ public class GutenbergPanel {
             imageList.getView().setBorder(BorderFactory.createEmptyBorder());
             downloads.getView().setBorder(BorderFactory.createEmptyBorder());
             f.getView().setBorder(BorderFactory.createEmptyBorder());
-            imageList.addMouseListener(new ListenToClickOnGutenbergList(imageList));
+            imageList.setAction(new SelectInGutenbergList(imageList));
 
             JSplitPane pane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true, downloads.getView(), imageList.getView());
             pane.setDividerLocation(downloads.getView().getPreferredSize().width);
@@ -164,7 +162,7 @@ public class GutenbergPanel {
                 @Override
                 public void addNotify() {
                     super.addNotify();
-                    if (!search.isReady() ) {
+                    if (!search.isReady()) {
                         search.startThreadedIndex(view);
                     }
                     t.start();
@@ -273,7 +271,7 @@ public class GutenbergPanel {
         //(for ex: the) may cause false positives to fill the cache
         //(for ex: the -> theo)
         for (Object stopWord : StandardAnalyzer.STOP_WORDS_SET) {
-            Pattern p = Pattern.compile("(?:^| )" + new String((char[])stopWord) + "(?:$| )", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+            Pattern p = Pattern.compile("(?:^| )" + new String((char[]) stopWord) + "(?:$| )", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
             currentSearch = p.matcher(currentSearch).replaceAll(" ");
         }
         //save/remove the topic metatag if it is found...
@@ -327,7 +325,7 @@ public class GutenbergPanel {
         }
 
         @Override
-        @SuppressWarnings( "unchecked")
+        @SuppressWarnings("unchecked")
         protected List<GutenbergBook> doInBackground() {
             try {
                 GutenbergSearch.SearchCallback callback = new GutenbergSearch.SearchCallback() {
@@ -361,34 +359,32 @@ public class GutenbergPanel {
         }
     }
 
-    private class ListenToClickOnGutenbergList extends MouseAdapter {
+    private class SelectInGutenbergList extends AbstractAction {
 
-        private final ImageList imageList;
+        private final ImageList<GutenbergBook> imageList;
 
-        public ListenToClickOnGutenbergList(ImageList imageList) {
+        public SelectInGutenbergList(ImageList<GutenbergBook> imageList) {
             this.imageList = imageList;
         }
 
         @Override
-        public void mouseClicked(MouseEvent e) {
-            if (e.getClickCount() <= 1 || e.getButton() != MouseEvent.BUTTON1) {
-                return;
-            }
-            GutenbergBook book = (GutenbergBook) imageList.locationToObject(e.getPoint());
-            if (book != null) {
+        public void actionPerformed(ActionEvent e) {
 
+            for (GutenbergBook book : imageList.getSelectedObjects()) {
                 DownloadState download = downloads.get(book.getURL());
                 if (download == null) {
                     addGutenbergBookToDownloadList(book);
                 } else if (download.isDone()) {
                     downloads.open(book, download);
                 }
+                break;
             }
         }
 
         private void addGutenbergBookToDownloadList(GutenbergBook book) {
             try {
-                Path bookFile = IoUtils.getSafeFileSystemFile(libraryDir, book.getFileName(" & ", " - "));
+                //it is moved to the final name in the view, to allow later library directory watching
+                Path bookFile = Files.createTempFile("", "");
                 downloads.add(book, book.getURL(), bookFile, book.getExtent(), book.getMimeType());
             } catch (IOException ex) {
                 Bookjar.log.log(Level.SEVERE, "Could not start download", ex);

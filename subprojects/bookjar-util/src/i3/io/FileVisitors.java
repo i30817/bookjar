@@ -3,28 +3,40 @@ package i3.io;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class FileVisitors {
 
     /**
-     * Stores files in a list, if accepted
-     * This class can be overriden to modify the always true accepts method to filter
-     * files (not directories)
+     * Just records the files it encounters
      */
-    public static class ListFileVisitor implements FileVisitor<Path> {
+    public static class Files extends FilesTransformer<Path> {
 
-        public List<Path> paths = new LinkedList<>();
+        @Override
+        protected Path accepts(Path file) {
+            return file;
+        }
+    }
+
+    /**
+     * Stores readable objects from accepted files in a canonical Map
+     * (duplicates with the same hashcode are never recorded). This class must
+     * be overriden to modify the accepts(OUT) method to filter and transform
+     * files (not directories)
+     *
+     * @param <OUT> the transformation for the file output
+     */
+    public static abstract class FilesTransformer<OUT> implements FileVisitor<Path> {
+
+        public final Map<OUT, OUT> canonicalMap = new HashMap<OUT, OUT>();
 
         @Override
         public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-            if (Files.isReadable(dir)) {
+            if (java.nio.file.Files.isReadable(dir)) {
                 return FileVisitResult.CONTINUE;
             }
             return FileVisitResult.SKIP_SUBTREE;
@@ -32,15 +44,19 @@ public class FileVisitors {
 
         @Override
         public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-            if (accepts(file)) {
-                paths.add(file);
+            if (!java.nio.file.Files.isReadable(file)) {
+                return FileVisitResult.CONTINUE;
+            }
+            OUT out = accepts(file);
+            if (out != null && !canonicalMap.containsKey(out)) {
+                canonicalMap.put(out, out);
             }
             return FileVisitResult.CONTINUE;
         }
 
         @Override
         public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-            IoUtils.log.warning("visitFileFailed: " + exc.toString());
+            IoUtils.log.log(Level.WARNING, "visitFileFailed: {0}", exc.toString());
             return FileVisitResult.CONTINUE;
         }
 
@@ -50,13 +66,13 @@ public class FileVisitors {
         }
 
         /**
-         * Override this to change the files in the list
+         * Override this to accept the OUT form of the files in the list, return
+         * null to skip.
+         *
          * @param file
-         * @return
+         * @return the transform of the file or null to skip it
          */
-        protected boolean accepts(Path file) {
-            return true;
-        }
+        protected abstract OUT accepts(Path file);
     }
 
     /**
@@ -71,20 +87,20 @@ public class FileVisitors {
 
         @Override
         public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-            Files.deleteIfExists(file);
+            java.nio.file.Files.deleteIfExists(file);
             return FileVisitResult.CONTINUE;
         }
 
         @Override
         public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-            IoUtils.log.warning("visitFileFailed: " + exc.toString());
+            IoUtils.log.log(Level.WARNING, "visitFileFailed: {0}", exc.toString());
             return FileVisitResult.CONTINUE;
         }
 
         @Override
         public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
             if (exc == null) {
-                Files.deleteIfExists(dir);
+                java.nio.file.Files.deleteIfExists(dir);
             }
             return FileVisitResult.CONTINUE;
         }

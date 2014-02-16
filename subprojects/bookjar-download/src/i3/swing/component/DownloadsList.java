@@ -15,13 +15,11 @@ import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.ServiceLoader;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.DefaultListModel;
@@ -72,6 +70,7 @@ public class DownloadsList<E> implements Observer {
 
     /**
      * Get the download object corresponding to the url
+     *
      * @param downloading
      * @return Download if any in the list with the same url
      */
@@ -133,17 +132,18 @@ public class DownloadsList<E> implements Observer {
     public void update(Observable o, Object arg) {
         Download d = (Download) o;
         DownloadState s = d.getCurrentDownloadState();
-        //only should be called once when finished
-        if(s.isDone()){
+        if (s.isDone()) {
             int index = getIndex(s.getURL());
             ModelObject<E> m = model.get(index);
+            //only should be called once when finished
             downloadView.finished(m.value, s);
         }
         view.repaint();
     }
 
     /**
-     * Delegates to the choosen download view
+     * Delegates to the chosen download view
+     *
      * @param addedValue
      * @param state (needs to be done, assert if not and running in debug mode)
      */
@@ -243,8 +243,8 @@ public class DownloadsList<E> implements Observer {
             for (ModelObject<E> d : downloads) {
                 try {
                     Desktop.getDesktop().open(d.download.getDownloadedFile().getParent().toFile());
-                } catch (IOException ex) {
-                    Download.log.info("Couldn't open parent folder of file "+d.download.getDownloadedFile());
+                } catch (IOException | NullPointerException ex) {
+                    Download.log.info("Couldn't open parent folder of file " + d.download.getDownloadedFile());
                 }
             }
         }

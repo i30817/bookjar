@@ -1,5 +1,16 @@
 package i3.ui;
 
+import i3.io.IoUtils;
+import i3.main.Bookjar;
+import i3.parser.Property;
+import i3.swing.LookAndFeels;
+import i3.ui.controller.MovingPane;
+import i3.ui.option.BooleanOptions;
+import i3.ui.option.ColorOptions;
+import i3.ui.option.ObjectOptions;
+import i3.ui.option.Preview;
+import i3.ui.option.ShortcutOptions;
+import i3.ui.styles.DocumentStyle;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -30,25 +41,16 @@ import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.WindowConstants;
 import javax.swing.plaf.ColorUIResource;
 import javax.swing.text.StyleConstants;
-import i3.main.Bookjar;
 import org.netbeans.validation.api.Problem;
 import org.netbeans.validation.api.ui.ValidationUI;
-import i3.parser.Property;
-import i3.ui.controller.MovingPane;
-import i3.ui.option.BooleanOptions;
-import i3.ui.option.ColorOptions;
-import i3.ui.option.ObjectOptions;
-import i3.ui.option.Preview;
-import i3.ui.option.ShortcutOptions;
-import i3.ui.styles.DocumentStyle;
-import i3.io.IoUtils;
-import i3.swing.LookAndFeels;
+import org.netbeans.validation.api.ui.swing.SwingValidationGroup;
 
 public class Options extends javax.swing.JDialog {
 
     private final MovingPane preview;
     private final Application main;
     private LookAndFeelInfo defaultInfo;
+    private final SwingValidationGroup validation;
 
     /** Creates new form OptionDialog */
     public Options(Application main) {
@@ -289,7 +291,9 @@ public class Options extends javax.swing.JDialog {
                 okButton.setEnabled(false);
             }
         };
-        shortcutOptions.getValidationGroup().addUI(okUI);
+        
+        validation = SwingValidationGroup.create(okUI);
+        shortcutOptions.setupValidation(validation);
 
         configureOptions();
         booleanOptions.updateSize();

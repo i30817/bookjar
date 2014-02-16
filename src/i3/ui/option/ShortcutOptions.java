@@ -1,5 +1,7 @@
 package i3.ui.option;
 
+import i3.swing.Bind.Binding;
+import i3.swing.component.KeyCapturer;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Insets;
@@ -32,11 +34,8 @@ import org.netbeans.validation.api.Problem;
 import org.netbeans.validation.api.Problems;
 import org.netbeans.validation.api.Severity;
 import org.netbeans.validation.api.Validator;
-import org.netbeans.validation.api.ui.ValidationGroup;
 import org.netbeans.validation.api.ui.ValidationUI;
 import org.netbeans.validation.api.ui.swing.SwingValidationGroup;
-import i3.swing.Bind.Binding;
-import i3.swing.component.KeyCapturer;
 
 /**
  *
@@ -44,7 +43,6 @@ import i3.swing.component.KeyCapturer;
  */
 public final class ShortcutOptions extends javax.swing.JPanel implements Iterable<Entry<Binding, KeyStroke>> {
 
-    private SwingValidationGroup vg;
 
     /**
      * Creates a shortcut options panel.
@@ -60,16 +58,13 @@ public final class ShortcutOptions extends javax.swing.JPanel implements Iterabl
                 }
             }
         });
-
-        vg = SwingValidationGroup.create();
-        KeyStrokesNotEqual noEqualKeyStrokes = new KeyStrokesNotEqual();
-        vg.add(keyCapturer, noEqualKeyStrokes);
-        vg.addUI(noEqualKeyStrokes);
-        shortcutKeysList.setCellRenderer(noEqualKeyStrokes);
     }
 
-    public ValidationGroup getValidationGroup() {
-        return vg;
+    public void setupValidation(SwingValidationGroup group) {
+        KeyStrokesNotEqual noEqualKeyStrokes = new KeyStrokesNotEqual(group.createProblemLabel());
+        group.add(keyCapturer, noEqualKeyStrokes);
+        group.addUI(noEqualKeyStrokes);
+        shortcutKeysList.setCellRenderer(noEqualKeyStrokes);
     }
 
     public ShortcutOptions(String string, String string0) {
@@ -201,9 +196,13 @@ public final class ShortcutOptions extends javax.swing.JPanel implements Iterabl
     private class KeyStrokesNotEqual implements Validator<String>, ValidationUI, ListCellRenderer<Binding> {
 
         ListCellRenderer<? super Binding> renderer = shortcutKeysList.getCellRenderer();
-        Component errorCell = vg.createProblemLabel();
+        Component errorCell;
         int loc;
 
+        public KeyStrokesNotEqual(Component errorCell) {
+            this.errorCell = errorCell;
+        }
+        
         @Override
         public Component getListCellRendererComponent(JList<? extends Binding> list, Binding value, int index, boolean isSelected, boolean cellHasFocus) {
             if (loc == index) {
@@ -247,7 +246,7 @@ public final class ShortcutOptions extends javax.swing.JPanel implements Iterabl
         @Override
         public void showProblem(Problem prblm) {
             loc = shortcutKeysList.getSelectedIndex();
-            shortcutKeysList.setEnabled(false);;
+            shortcutKeysList.setEnabled(false);
         }
     }
 }

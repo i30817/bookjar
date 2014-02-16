@@ -9,12 +9,11 @@ import java.util.Objects;
  * is created by reflection of a user provided
  * method.
  *
- * All provided arguments are 'frozen', except on the
- * case where the used factory function has a name substring
- * create<b>Event</b>Action, create<b>Event</b>Listener
- * that denotes that the object will pass the appropriate
- * (and changing) argument to the first argument of the function.
- *
+ * All provided arguments are hard-referenced inside the listener, except on the
+ * case where the used factory function create<b>Event</b>Listener
+ * that will pass the appropriate (and changing) event as the first argument of 
+ * the function.
+ * 
  * You can't use null as 'arguments', since they
  * don't allow class information to be gleaned
  */

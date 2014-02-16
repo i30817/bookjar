@@ -1,7 +1,6 @@
 package i3.thread;
 
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import i3.io.IoUtils;
 
 /**

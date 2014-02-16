@@ -21,6 +21,7 @@ public final class Download extends Observable {
 
     /**
      * Create a download
+     *
      * @param downloadURL
      * @param localFile
      * @param expectedSizeInBytes
@@ -36,6 +37,7 @@ public final class Download extends Observable {
 
     /**
      * Create a download with a unknown mimeType
+     *
      * @param downloadURL
      * @param localFile
      * @param expectedSizeInBytes
@@ -47,6 +49,7 @@ public final class Download extends Observable {
 
     /**
      * Create a download with a unknown size and a unknown mimeType
+     *
      * @param downloadURL
      * @param localFile
      * @throws DownloadException
@@ -57,6 +60,7 @@ public final class Download extends Observable {
 
     /**
      * The local file where the download is being put
+     *
      * @return
      */
     public Path getDownloadedFile() {
@@ -65,6 +69,7 @@ public final class Download extends Observable {
 
     /**
      * The origin of the download
+     *
      * @return
      */
     public URL getURL() {
@@ -73,6 +78,7 @@ public final class Download extends Observable {
 
     /**
      * Name of the downloaded file
+     *
      * @return
      */
     public String getName() {
@@ -80,8 +86,8 @@ public final class Download extends Observable {
     }
 
     /**
-     * Cancel the download, only cancels if it is running
-     * (not if done and not if not yet started)
+     * Cancel the download, only cancels if it is running (not if done and not
+     * if not yet started)
      */
     public void cancel() {
         currentState = currentState.cancel(null);
@@ -106,10 +112,10 @@ public final class Download extends Observable {
     }
 
     /**
-     * This view of the current download state
-     * is immutable, but only should be called
-     * once per set of changes since its instance
-     * can and will change between calls.
+     * This view of the current download state is immutable, but only should be
+     * called once per set of changes since its instance can and will change
+     * between calls.
+     *
      * @return
      */
     public DownloadState getCurrentDownloadState() {
@@ -127,6 +133,7 @@ public final class Download extends Observable {
 
     /**
      * Start the download
+     *
      * @throws IOException
      */
     public void start() throws IOException {
@@ -159,7 +166,6 @@ public final class Download extends Observable {
             }
         };
 
-
         Runnable task = new Runnable() {
 
             public void run() {
@@ -175,9 +181,9 @@ public final class Download extends Observable {
                     //next after start
                     currentState = currentState.next(0L, 0L, size);
                     //every rateOfBytes or if the download stalls, a 'new' immutable state will be created
-                    int rateOfBytes = (int) Math.max(512, size*0.02);
+                    int rateOfBytes = (int) Math.max(512, size * 0.02);
                     writeInto(stream, true, Files.newOutputStream(downloadLocalFile), true, rateOfBytes, continuation);
-                } catch (IOException ex) {
+                } catch (IOException | NullPointerException ex) {
                     cancel(ex);
                 } finally {
                     //if a exception is not thrown this is the end state

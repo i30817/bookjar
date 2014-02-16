@@ -2,7 +2,6 @@ package i3.parser;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.UndoableEditEvent;
 import javax.swing.text.AttributeSet;
@@ -10,7 +9,6 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultStyledDocument;
 import javax.swing.text.GapContent;
 import javax.swing.text.StyleContext;
-import javax.swing.undo.UndoableEdit;
 
 /**
  * A document implementation that doesn't duplicate memory in buffered insertion

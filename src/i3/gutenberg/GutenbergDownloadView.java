@@ -9,24 +9,28 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.file.Path;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import i3.main.GutenbergBook;
-import i3.main.LocalBook;
 import i3.ui.Application;
-import i3.ui.BookMarks;
 import i3.io.IoUtils;
-import i3.swing.icon.AnimatedIcon;
+import i3.main.Bookjar;
+import i3.main.Library;
+import i3.main.LocalBook;
 import i3.swing.icon.OverlayIcon;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.util.logging.Level;
 
 /**
  * A view Provider for gutenberg text downloads
+ *
  * @author microbiologia
  */
 public class GutenbergDownloadView extends DownloadView<GutenbergBook> {
+
     //images are 32 x 32
     private final static int ICON_HEIGHT = 36;
     private final static int ICON_WIDTH = 36;
@@ -34,7 +38,8 @@ public class GutenbergDownloadView extends DownloadView<GutenbergBook> {
     private final Icon percentageText, percentageHtml, percentageDocument;
     private final Icon cancelledText, cancelledHtml, cancelledDocument;
     private final Icon doneText, doneHtml, doneDocument;
-    private final PercentageIcon percentageIcon = new PercentageIcon();
+    private final PercentageIcon percentageIcon = new PercentageIcon(),
+            unknownPercentageIcon = new PercentageIcon("??");
 
     public GutenbergDownloadView() {
         init(false, true, false);
@@ -44,11 +49,9 @@ public class GutenbergDownloadView extends DownloadView<GutenbergBook> {
         percentageText = new OverlayIcon(textIcon, percentageIcon);
         percentageHtml = new OverlayIcon(htmlIcon, percentageIcon);
         percentageDocument = new OverlayIcon(documentIcon, percentageIcon);
-        ImageIcon loadingIconNotAnimated = new ImageIcon(GutenbergDownloadView.class.getResource("loading.gif"));
-        Icon loadingIcon = new AnimatedIcon(loadingIconNotAnimated);
-        loadingText = new OverlayIcon(textIcon, loadingIcon);
-        loadingHtml = new OverlayIcon(htmlIcon, loadingIcon);
-        loadingDocument = new OverlayIcon(documentIcon, loadingIcon);
+        loadingText = new OverlayIcon(textIcon, unknownPercentageIcon);
+        loadingHtml = new OverlayIcon(htmlIcon, unknownPercentageIcon);
+        loadingDocument = new OverlayIcon(documentIcon, unknownPercentageIcon);
         Icon cancelledIcon = new ImageIcon(GutenbergDownloadView.class.getResource("cancel.png"));
         cancelledText = new OverlayIcon(textIcon, cancelledIcon);
         cancelledHtml = new OverlayIcon(htmlIcon, cancelledIcon);
@@ -111,6 +114,10 @@ public class GutenbergDownloadView extends DownloadView<GutenbergBook> {
         }
 
         if (state.isCancelled()) {
+            Exception e = state.getError();
+            if (e != null) {
+                Bookjar.log.log(Level.SEVERE, "download was cancelled due to error ", e);
+            }
             return cancelled;
         }
 
@@ -123,33 +130,53 @@ public class GutenbergDownloadView extends DownloadView<GutenbergBook> {
 
     @Override
     public void open(GutenbergBook value, DownloadState state) {
-        Path fileToRead = state.getDownloadedFile();
-        try {
-            URL urlToRead = fileToRead.toUri().toURL();
+        if (Library.libraryNotExists()) {
+            return;
+        }
+
+        Path gutenbergDir = Library.fromLibrary("project_gutenberg");
+        Path fileToRead = IoUtils.getSafeFileSystemFile(gutenbergDir, value.getFileName(" & ", " - "));
+        String language = value.getFirstLanguage();
+        //first create, THEN move (so that the file watchdog doesn't mess metadata)
+        LocalBook book = Application.app.getLibraryView().createIfAbsent(fileToRead, language, true);
+        //might have returned a 'old' book with the same name but different path (user moved it maybe)
+        fileToRead = book.getAbsoluteFile();
+
+        if (Files.exists(fileToRead)) {//already exists, do nothing
             Application.app.toggleGutenbergList();
-            Application.app.read(urlToRead);
-        } catch (MalformedURLException ex) {
-            throw new AssertionError("Impossible!", ex);
+            Application.app.read(book);
+        } else {
+            //move to library dir
+            try {
+                Files.createDirectories(gutenbergDir);
+                Files.move(state.getDownloadedFile(), fileToRead, StandardCopyOption.REPLACE_EXISTING);
+                Application.app.toggleGutenbergList();
+                Application.app.read(book);
+            } catch (IOException ex) {
+                Bookjar.log.log(Level.SEVERE, "could not move file to library directory", ex);
+            }
         }
     }
 
     @Override
     public void finished(GutenbergBook book, DownloadState state) {
-        String language = book.getFirstLanguage();
-        Path downloadedFile = state.getDownloadedFile();
-        URL downloadedURL = IoUtils.toURL(downloadedFile);
-        BookMarks bookMarks = Application.app.getBookMarks();
-        bookMarks.put(downloadedURL, new LocalBook(downloadedFile, language, 0, 0F, true));
     }
 
     private static class PercentageIcon implements Icon {
 
         private Font font;
-        private int height = Short.MAX_VALUE, width = Short.MAX_VALUE,
-                percentage;
+        private int height = Short.MAX_VALUE, width = Short.MAX_VALUE;
+        private String percent;
+
+        public PercentageIcon(String percent) {
+            this.percent = percent;
+        }
+
+        public PercentageIcon() {
+        }
 
         public void setPercentage(int percentage) {
-            this.percentage = percentage;
+            percent = Integer.toString(percentage) + "%";
         }
 
         @Override
@@ -165,7 +192,7 @@ public class GutenbergDownloadView extends DownloadView<GutenbergBook> {
             g2.setFont(font);
             FontMetrics fm = g2.getFontMetrics();
             g2.translate(x, y + fm.getAscent());
-            g2.drawString(Integer.toString(percentage) + "%", 2, 0);
+            g2.drawString(percent, 2, 0);
             g2.setColor(color);
         }
 
@@ -192,4 +219,3 @@ public class GutenbergDownloadView extends DownloadView<GutenbergBook> {
         }
     }
 }
-

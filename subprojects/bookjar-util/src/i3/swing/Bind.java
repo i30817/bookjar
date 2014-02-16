@@ -28,7 +28,7 @@ import javax.swing.text.JTextComponent;
  * Serializes saved keystrokes.
  *
  * In this class Binding is strongly associated with the action. They are almost
- * indistinguisable (Binding has a default keystroke too) by design, so that
+ * indistinguishable (Binding has a default keystroke too) by design, so that
  * when different keystrokes map to the same binding a exception is launched.
  * The correct place to fix this is the source of the data, so the user can retry.
  * Giving null keystrokes removes the input mapping (but not the action mapping)

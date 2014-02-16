@@ -1,8 +1,6 @@
 package i3.dragndrop;
 
 import java.awt.dnd.DropTargetDropEvent;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import i3.io.IoUtils;
 
 /**

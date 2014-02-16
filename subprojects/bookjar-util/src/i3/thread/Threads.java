@@ -17,32 +17,28 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import i3.io.IoUtils;
+import java.util.concurrent.Callable;
 
 /**
- * The queues returned by this can use Cancellables
- * or normal callables/runnables, and have special
- * thread creation and survival characteristics.
+ * The queues returned by this can use Cancellables or normal
+ * callables/runnables, and have special thread creation and survival
+ * characteristics.
  *
- * Warning:
- * Some IO tasks don't respond to interrupts.
- * A common hang like this is using url.openStream -
- * one solution is to set the default timeout properties,
- * but that can lead to failures in slow networks.
- * Instead, in the Cancellable save the HttpURLConnection
- * (with a cast from url.openConnection) in a volatile field,
- * and in the doCancel(Throwable) method :
- * if(conn != null){
- * conn.setConnectTimeout(1);
- * conn.setReadTimeout(1);
- * conn.disconnect();
+ * Warning: Some IO tasks don't respond to interrupts. A common hang like this
+ * is using url.openStream - one solution is to set the default timeout
+ * properties, but that can lead to failures in slow networks. Instead, in the
+ * Cancellable save the HttpURLConnection (with a cast from url.openConnection)
+ * in a volatile field, and in the doCancel(Throwable) method : if(conn !=
+ * null){ conn.setConnectTimeout(1); conn.setReadTimeout(1); conn.disconnect();
  * }
+ *
  * @author Owner
  */
 public final class Threads {
 
     /**
-     * This future is a null object. Its call method  does
-     * nothing, but it returns the given value.
+     * This future is a null object. Its get method does nothing, but it returns
+     * the given value.
      */
     public static <T> Future<T> newObjectFuture(T value) {
         return new FutureTask<>(new Runnable() {
@@ -51,6 +47,20 @@ public final class Threads {
             public void run() {
             }
         }, value);
+    }
+
+    /**
+     * This callable is a null object. Its call method does nothing, but it
+     * returns the given value.
+     */
+    public static <T> Callable<T> newObjectCallable(final T value) {
+        return new Callable<T>() {
+
+            @Override
+            public T call() throws Exception {
+                return value;
+            }
+        };
     }
 
     private static CancellableExecutor createExecutor(boolean shutdownOnExit, int minimumNThreads, int maximumNThreads, long secondsTimeOut, BlockingQueue<Runnable> queue, String name) {
@@ -77,18 +87,19 @@ public final class Threads {
     }
 
     /**
-     * A pool with exactly N threads that rejects any task after
-     * if there are no threads available.
-     * @throws RejectedExecutionException if a task is submited
-     * when all threads are busy.
+     * A pool with exactly N threads that rejects any task after if there are no
+     * threads available.
+     *
+     * @throws RejectedExecutionException if a task is submited when all threads
+     * are busy.
      */
     public static ExecutorService newFixedRejectingExecutor(String name, int nThreads, boolean shutdownOnExit) {
         return createExecutor(shutdownOnExit, nThreads, nThreads, 0L, new LinkedBlockingQueue<Runnable>(nThreads), name);
     }
 
     /**
-     * A pool with exactly N threads that discards any task after
-     * if there are no threads available.
+     * A pool with exactly N threads that discards any task after if there are
+     * no threads available.
      */
     public static ExecutorService newFixedDiscardingExecutor(String name, int nThreads, boolean shutdownOnExit) {
         CancellableExecutor executor = createExecutor(shutdownOnExit, nThreads, nThreads, 0L, new LinkedBlockingQueue<Runnable>(nThreads), name);
@@ -98,6 +109,7 @@ public final class Threads {
 
     /**
      * A pool with exactly nThreads that don't timeout
+     *
      * @param nThreads > 0
      * @param shutdownOnExit run a Shutdown Hook to shutdown on exit.
      * @return
@@ -108,6 +120,7 @@ public final class Threads {
 
     /**
      * A pool with exactly nThreads that don't timeout
+     *
      * @param nThreads > 0
      * @param shutdownOnExit run a Shutdown Hook to shutdown on exit.
      * @return
@@ -117,8 +130,9 @@ public final class Threads {
     }
 
     /**
-     * A pool that has no maximum number of threads
-     * and will kill the threads after a timeout after the last task
+     * A pool that has no maximum number of threads and will kill the threads
+     * after a timeout after the last task
+     *
      * @param secondsTimeOut > 0
      * @param shutdownOnExit run a Shutdown Hook to shutdown on exit.
      * @return
@@ -128,8 +142,9 @@ public final class Threads {
     }
 
     /**
-     * A pool that has a maximum number of threads
-     * and will kill the threads after a timeout after the last task
+     * A pool that has a maximum number of threads and will kill the threads
+     * after a timeout after the last task
+     *
      * @param maximumNThreads > 0
      * @param secondsTimeOut > 0
      * @param shutdownOnExit run a Shutdown Hook to shutdown on exit.
@@ -144,8 +159,9 @@ public final class Threads {
     }
 
     /**
-     * A pool that has a maximum number of threads
-     * and will kill the threads after a timeout after the last task
+     * A pool that has a maximum number of threads and will kill the threads
+     * after a timeout after the last task
+     *
      * @param maximumNThreads > 0
      * @param secondsTimeOut > 0
      * @param shutdownOnExit run a Shutdown Hook to shutdown on exit.
@@ -161,7 +177,9 @@ public final class Threads {
 
     /**
      * A pool that has a minimum number of threads, a maximum number of threads
-     * and will kill maximumNThreads - minimumNThreads after a timeout after the last task
+     * and will kill maximumNThreads - minimumNThreads after a timeout after the
+     * last task
+     *
      * @param minimumNThreads >= 0
      * @param maximumNThreads > 0
      * @param secondsTimeOut > 0
@@ -178,7 +196,9 @@ public final class Threads {
 
     /**
      * A pool that has a minimum number of threads, a maximum number of threads
-     * and will kill maximumNThreads - minimumNThreads after a timeout after the last task
+     * and will kill maximumNThreads - minimumNThreads after a timeout after the
+     * last task
+     *
      * @param minimumNThreads >= 0
      * @param maximumNThreads > 0
      * @param secondsTimeOut > 0
@@ -195,12 +215,12 @@ public final class Threads {
 
     /**
      * As you can see, we are going to reject the addition of a new task if
-     * there are no threads to handle it. This will cause the thread pool executor
-     * to try and allocate a new thread (up to the maximum threads).
-     * If there are no threads, the task will be rejected.
-     * In our case, if the task is rejected, we would like to put it back to the queue.
-     * This is a simple thing to do with ThreadPoolExecutor since we can implement
-     * our own RejectedExecutionHandler
+     * there are no threads to handle it. This will cause the thread pool
+     * executor to try and allocate a new thread (up to the maximum threads). If
+     * there are no threads, the task will be rejected. In our case, if the task
+     * is rejected, we would like to put it back to the queue. This is a simple
+     * thing to do with ThreadPoolExecutor since we can implement our own
+     * RejectedExecutionHandler
      */
     private static final class ScalingQueue<E> extends LinkedBlockingQueue<E> {
 
@@ -234,13 +254,13 @@ public final class Threads {
         }
 
         /**
-         * Inserts the specified element at the tail of this queue if there is at
-         * least one available thread to run the current task. If all pool threads
-         * are actively busy, it rejects the offer.
+         * Inserts the specified element at the tail of this queue if there is
+         * at least one available thread to run the current task. If all pool
+         * threads are actively busy, it rejects the offer.
          *
          * @param o the element to add.
          * @return <tt>true</tt> if it was possible to add the element to this
-         *         queue, else <tt>false</tt>
+         * queue, else <tt>false</tt>
          * @see ThreadPoolExecutor#execute(Runnable)
          */
         @Override
@@ -251,8 +271,8 @@ public final class Threads {
     }
 
     /**
-     * A queue that acts like a lifo stack
-     * it has final almost everywhere as a performance hack
+     * A queue that acts like a lifo stack it has final almost everywhere as a
+     * performance hack
      */
     private static class Stack<E> extends LinkedBlockingDeque<E> {
 
@@ -313,12 +333,12 @@ public final class Threads {
 
     /**
      * As you can see, we are going to reject the addition of a new task if
-     * there are no threads to handle it. This will cause the thread pool executor
-     * to try and allocate a new thread (up to the maximum threads).
-     * If there are no threads, the task will be rejected.
-     * In our case, if the task is rejected, we would like to put it back to the queue.
-     * This is a simple thing to do with ThreadPoolExecutor since we can implement
-     * our own RejectedExecutionHandler
+     * there are no threads to handle it. This will cause the thread pool
+     * executor to try and allocate a new thread (up to the maximum threads). If
+     * there are no threads, the task will be rejected. In our case, if the task
+     * is rejected, we would like to put it back to the queue. This is a simple
+     * thing to do with ThreadPoolExecutor since we can implement our own
+     * RejectedExecutionHandler
      */
     private static final class ScalingStack<E> extends Stack<E> {
 
@@ -350,8 +370,7 @@ public final class Threads {
     }
 
     /**
-     * If rejected just add directly
-     * (doesn't block on all factories since the
+     * If rejected just add directly (doesn't block on all factories since the
      * ones that use this don't put a limit on the queue/stack)
      */
     private static final class AddToLargeQueuePolicy implements RejectedExecutionHandler {
@@ -402,6 +421,7 @@ public final class Threads {
 
         /**
          * Override so that we can recognize the cancellable.
+         *
          * @param <T>
          * @param callable
          * @return

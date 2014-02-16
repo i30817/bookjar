@@ -13,11 +13,12 @@ import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 
 /**
- * This action wraps another and activates and deactivates if set over a valid JList cell when the menu given
- * becomes visible. It also selects the underlying cell if it is not selected yet
+ * This action wraps another and activates and deactivates if set over a valid
+ * JList cell when the menu given becomes visible. It also selects the
+ * underlying cell if it is not selected yet
  *
- * Action starts disabled, and activates and deactivates on the popup according to
- * if the mouse is over a list cell and if the wrapped action is enabled
+ * Action starts disabled, and activates and deactivates on the popup according
+ * to if the mouse is over a list cell and if the wrapped action is enabled
  */
 public class ListPopupActionWrapper extends AbstractAction implements PopupMenuListener {
 
@@ -70,6 +71,16 @@ public class ListPopupActionWrapper extends AbstractAction implements PopupMenuL
     @Override
     public void actionPerformed(ActionEvent e) {
         delegate.actionPerformed(e);
+    }
+
+    @Override
+    public void setEnabled(boolean b) {
+        delegate.setEnabled(b);
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return delegate.isEnabled();
     }
 
 }

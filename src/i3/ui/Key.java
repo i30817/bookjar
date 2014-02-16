@@ -7,13 +7,29 @@ import i3.swing.dynamic.DynamicAction;
 import i3.swing.dynamic.LazyObjectCall;
 
 /**
- * Used on Bind and ShortcutOptions to link actions to descriptions and keystrokes
+ * Used on Bind and ShortcutOptions to link actions to descriptions and
+ * keystrokes
  */
 public enum Key implements Bind.Binding {
+
     //these actions target needs to be late binded due to the way enum deserialization works.
     //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
+//these actions target needs to be late binded due to the way enum deserialization works.
+    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
+//these actions target needs to be late binded due to the way enum deserialization works.
+    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
+//these actions target needs to be late binded due to the way enum deserialization works.
+    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
+//these actions target needs to be late binded due to the way enum deserialization works.
+    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
+//these actions target needs to be late binded due to the way enum deserialization works.
+    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
+//these actions target needs to be late binded due to the way enum deserialization works.
+    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
+//these actions target needs to be late binded due to the way enum deserialization works.
+    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
     Toggle_fullscreen(DynamicAction.createAction("Set/Reset fullscreen", "Toggles full screen", LazyApp.instance, "fullScreen"), "alt ENTER"),
-    Add_books(i3.swing.SwingUtils.openFileChooser("Add books", "Adds books if the directory chosen has valid targets - these include compressed files, but those may fail when reading", null, new ChooserCallback()), "pressed A"),
+    Select_library_directory(i3.swing.SwingUtils.openFileChooser("Select library directory", "Monitors a directory for added and removed books - these include compressed files, but those may fail when reading", null, new ChooserCallback()), "pressed A"),
     Move_forward(DynamicAction.createAction("Forward", "Move Forward when reading a book", LazyApp.instance, "moveForward"), "pressed RIGHT"),
     Move_backward(DynamicAction.createAction("Backward", "Move Backward when reading a book", LazyApp.instance, "moveBackward"), "pressed LEFT"),
     Toggle_library(DynamicAction.createAction("Show/Hide personal library", "Hide/show known books", LazyApp.instance, "toggleList"), "pressed ESCAPE"),
@@ -33,6 +49,8 @@ public enum Key implements Bind.Binding {
     Find(DynamicAction.createAction("Find", LazyApp.instance, "find"), null),
     Find_previous(DynamicAction.createAction("Previous", LazyApp.instance, "previous"), null),
     Hide_find(DynamicAction.createAction(" \u2297 ", LazyApp.instance, "hideFind"), null),
+    List_select_book(DynamicAction.createAction("Read book", LazyApp.instance, "listSelected"), null),
+    Sort_library(DynamicAction.createAction("Sort library", LazyApp.instance, "sortLibrary"), null),
     //don't rebing the original actions directly because they need the right name to display (and so do the original)
     Close_gutenberg(DynamicAction.createEventAction(" \u2297 ", null, Toggle_gutenberg.getAction(), "actionPerformed"), null),
     Close_library(DynamicAction.createEventAction(" \u2297 ", null, Toggle_library.getAction(), "actionPerformed"), null);
@@ -47,7 +65,6 @@ public enum Key implements Bind.Binding {
             }
         }
 
-
     }
 
     @Override
@@ -60,15 +77,19 @@ public enum Key implements Bind.Binding {
         return action;
     }
 
+    @Override
     public String toString() {
         Object v = action.getValue(Action.NAME);
         return (String) (v == null ? "(null)" : v);
     }
+
     private transient KeyStroke keyStroke;
-    private transient Action action;
+    private final transient Action action;
 
     static class LazyApp implements LazyObjectCall {
+
         static LazyApp instance = new LazyApp();
+
         //this is needed (even if app is already a singleton) because app is not a
         //_true_ singleton because it gets deserialized. If any expection happens
         //during deserialization, using Application.app directly in the dynamic classes

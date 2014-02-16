@@ -13,7 +13,7 @@ import javax.swing.SwingWorker;
  * constructor. The finished phase will receive the value (if any)
  * returned during the construct phase.
  *
- * All provided arguments are 'frozen'.
+ * All provided arguments are hard-referenced inside the swingworker 
  * You can't use null as 'arguments', since they
  * don't allow class information to be gleaned
  * @author i30817

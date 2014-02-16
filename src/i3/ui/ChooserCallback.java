@@ -1,18 +1,12 @@
 package i3.ui;
 
+import i3.swing.SwingUtils;
 import java.awt.Frame;
 import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.Comparator;
-import i3.parser.BookLoader;
-import i3.util.Strings;
-import i3.io.FileVisitors.ListFileVisitor;
-import i3.io.IoUtils;
-import i3.swing.SwingUtils;
+import javax.swing.JFileChooser;
 
-final class ChooserCallback extends SwingUtils.ChooserCallback<Path, Void> {
+final class ChooserCallback extends SwingUtils.ChooserCallback<Boolean, Void> {
 
     @Override
     public Frame getParentFrame() {
@@ -21,43 +15,18 @@ final class ChooserCallback extends SwingUtils.ChooserCallback<Path, Void> {
 
     @Override
     public File getStartFile() {
-        return Application.app.chooserStartFile;
+        return null;
     }
 
     @Override
-    protected Path doInBackground() throws Exception {
-        ListFileVisitor g = new ListFileVisitor() {
-
-            public boolean accepts(Path file) {
-                return Files.isReadable(file) && BookLoader.acceptsFiles(file.getFileName().toString());
-            }
-        };
-        for (File p : selectedPaths) {
-            Files.walkFileTree(p.toPath().toRealPath(), g);
-        }
-        if (!g.paths.isEmpty()) {
-            Collections.sort(g.paths, new Comparator<Path>() {
-
-                @Override
-                public int compare(Path o1, Path o2) {
-                    return Strings.compareNatural(o1.getFileName().toString(), o2.getFileName().toString());
-                }
-            });
-            Application.app.getBookMarks().putAll(g.paths);
-        }
-        return g.paths.size() == 1 ? g.paths.get(0) : null;
+    protected int getFileMode() {
+        return JFileChooser.DIRECTORIES_ONLY;
     }
 
     @Override
-    protected void done(Path first) {
-        //save for next execution
-        Application.app.chooserStartFile = selectedPaths.iterator().next();
-        //only show if the original start path is not a dir and there was only 1 file
-        if (first != null && !Application.app.chooserStartFile.isDirectory()) {
-            Application.app.read(IoUtils.toURL(first));
-        } else {
-            Application.app.showList(true);
-        }
+    protected Boolean doInBackground() throws Exception {
+        Path library = selectedPaths.iterator().next().toPath().toRealPath();
+        //run in this thread
+        return Application.app.getLibraryView().updateLibrary(library).call();
     }
-
 }

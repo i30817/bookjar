@@ -11,11 +11,10 @@ import javax.swing.Action;
  * is created by reflection of a user provided
  * method.
  *
- * All provided arguments are 'frozen', except on the
- * case where the used factory function has a name substring
- * create<b>Event</b>Action, create<b>Event</b>Listener
- * that denotes that the object will pass the appropriate
- * (and changing) argument to the first argument of the function.
+ * All provided arguments are hard-referenced inside the action, except on the
+ * case where the used factory function create<b>Event</b>Action
+ * that will pass the appropriate (and changing) event as the first argument of 
+ * the function.
  *
  * You can't use null as 'arguments', since they
  * don't allow class information to be gleaned
@@ -37,11 +36,6 @@ public final class DynamicAction implements Action {
         delegate.putValue(Action.NAME, name);
         delegate.putValue(Action.MNEMONIC_KEY, mnemonic == null ? null : (int) mnemonic);
         delegate.putValue(Action.LONG_DESCRIPTION, longDescription);
-
-    }
-
-    public static Action createAction(Character mnemonic, String name, String longDescription, Object target, String method, Object... arguments) {
-        return new DynamicAction(false, name, longDescription, mnemonic, target, method, arguments, MethodInvoker.toClasses(arguments));
     }
 
     public static Action createAction(String name, String longDescription, Object target, String method, Object... arguments) {
@@ -52,22 +46,12 @@ public final class DynamicAction implements Action {
         return new DynamicAction(false, name, null, null, target, method, arguments, MethodInvoker.toClasses(arguments));
     }
 
-    public static Action createAction(Object target, String method, Object... arguments) {
-        return new DynamicAction(false, null, null, null, target, method, arguments, MethodInvoker.toClasses(arguments));
-    }
-
     /**
      * Creates an action that calls target.method(ActionEvent e, Arguments...args),
      * (if args is empty, no arguments except the event)
-     * passing the originating actionevent
+     * 
+     * Passes the originating actionevent
      */
-    public static Action createEventAction(Object target, String method, Object... arguments) {
-        Object [] newArgsWithSpace = new Object[arguments.length + 1];
-        System.arraycopy(arguments, 0, newArgsWithSpace, 1, arguments.length);
-        Class [] classes = MethodInvoker.toClassesAndPrefix(ActionEvent.class, arguments);
-        return new DynamicAction(true, null, null, null, target, method, newArgsWithSpace, classes);
-    }
-
     public static Action createEventAction(String name, String longDescription, Object target, String method, Object... arguments) {
         Object [] newArgsWithSpace = new Object[arguments.length + 1];
         System.arraycopy(arguments, 0, newArgsWithSpace, 1, arguments.length);

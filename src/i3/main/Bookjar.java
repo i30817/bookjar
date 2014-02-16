@@ -2,7 +2,6 @@ package i3.main;
 
 import java.awt.EventQueue;
 import java.io.IOException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -24,7 +23,7 @@ public class Bookjar implements Runnable {
 
     public static final Path programLocation = getProgramLocation();
     private static final Path programStateLocation = programLocation.resolve("bookjarstate.bin");
-    public static Logger log;
+    public static Logger log = Logger.getAnonymousLogger();
     public static Handler handle;
 
     private static Path getProgramLocation() {
@@ -62,17 +61,18 @@ public class Bookjar implements Runnable {
             throw new AssertionError(e);
         }
 
-        final LocalBook head = app.getBookMarks().getFirst();
-        if (head != null && head.getReadPercentage() != 1F && head.getReadPercentage() != 0F) {
-            URL lastUsed = head.getURL();
-            app.read(lastUsed);
-        } else if (head != null) {
+        final LocalBook head = app.getLibraryView().getFirst();
+        if (head == null) {
+            return;
+        }
+        if (head.getReadPercentage() != 1F && head.getReadPercentage() != 0F) {
+            app.read(head);
+        } else {
             app.toggleList();
         }
     }
 
     private static void setProperties() {
-        log = Logger.getAnonymousLogger();
         //there is a bug in linux where x is stopped and the file is not written
         //i'm still unsure of the cause
         IoUtils.addShutdownHook(new SaveRunnable());

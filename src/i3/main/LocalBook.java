@@ -1,11 +1,18 @@
 package i3.main;
 
+import i3.parser.ParserListener;
+import i3.parser.Property;
+import i3.swing.SearchIterator;
+import i3.util.Strings;
+import i3.util.Tuples;
+import java.beans.PropertyChangeListener;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.EnumMap;
@@ -20,29 +27,34 @@ import javax.swing.text.DefaultStyledDocument;
 import javax.swing.text.MutableAttributeSet;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
-import i3.parser.ParserListener;
-import i3.parser.Property;
-import i3.util.Strings;
-import i3.util.Tuples;
-import i3.swing.SearchIterator;
 
 /**
- * Data store for book information, stored in
- * BookMarks
+ * Almost-Immutable Data store for book information - a book is considered equal
+ * to another if they have the same file name. Not the path, the filename.
+ *
+ * These pojos mutable part comes from the library dir, which is a static
+ * property which can change and is accessed for real locations. Therefore
+ * 'notExists', 'getURL' and 'getAbsoluteFile' should not be accessed while the
+ * library does not exist at the peril of nullpointer exceptions (it could
+ * return a 'imaginary' path, but fail fast is better).
+ *
  * @author fc30817
  */
 public final class LocalBook implements Book, Serializable {
 
+    private static final long serialVersionUID = -7345464131163339842L;
     private final int index;
     private final float percentageRead;
     private final boolean gutenbergFile;
     private final String language;
+    //should be final but it's assigned by readObj (for writeObj performance)
     private transient Path file;
-    private transient volatile Map<Property, Object> metadata;
+    private transient Map<Property, Object> metadata;//lazy init
+    private final transient boolean broken;//reconstructed  on library startup
 
     private void readObject(ObjectInputStream input) throws IOException, ClassNotFoundException {
         input.defaultReadObject();
-        file = Paths.get((String) input.readObject(), (String) input.readObject(), input.readUTF());
+        file = Paths.get((String) input.readObject(), (String) input.readUTF());
     }
 
     private void writeObject(ObjectOutputStream output) throws IOException {
@@ -50,35 +62,29 @@ public final class LocalBook implements Book, Serializable {
         //there is a bug caused by a FileChooser File subclass serialization
         //after the shutdownhooks are run. Shouldn't be a problem now since using Path
 
-        //assuming that books are normally placed in this tree:
-        // branch
-        //  -Author Name
-        //      -Series
+        //assuming that books are normally placed in these trees:
+        // Library            or        Library
+        //  -Author Name                 -Author Name
+        //      -Series                   -Book
         //       -Book
-        //a way to serialize the least is to try to get 3 dirs above the book,
-        //so the 'most' common substring is shared. Then write out 2 dirs above and
-        //finally the file.
-        int max = Math.max(file.getNameCount() - 3, 0);
-        Path upperBranch = file.getRoot().resolve(file.subpath(0, max));
-        int max2 = Math.max(file.getNameCount() - 1, 0);
-        Path middleBranch = file.subpath(max, max2);
-
-        output.writeObject(upperBranch.toString().intern());
-        output.writeObject(middleBranch.toString().intern());
+        //
+        //and that the local books are relative to Library (invariant), then we can do this
+        Path parent = file.getParent();
+        if (parent == null) {
+            output.writeObject("");//ignored for Paths.get()
+        } else {
+            output.writeObject(parent.toString().intern());
+        }
         output.writeUTF(file.getFileName().toString());
     }
 
-    public LocalBook(Path file, String language, int index, float percentageRead, boolean gutenbergFile) {
+    LocalBook(Path file, String language, int index, float percentageRead, boolean gutenbergFile, boolean broken) {
         this.language = language;
         this.file = file;
         this.index = index;
         this.percentageRead = percentageRead;
         this.gutenbergFile = gutenbergFile;
-    }
-
-    @Override
-    public Tuples.T2<String[], String> authorsAndTitle() {
-        return sanatizeFilename(file.getFileName().toString());
+        this.broken = broken;
     }
 
     @Override
@@ -97,15 +103,16 @@ public final class LocalBook implements Book, Serializable {
         return language;
     }
 
-    public LocalBook setLanguage(String language) {
-        return new LocalBook(file, language, index, percentageRead, gutenbergFile);
-    }
-
-    public Path getFile() {
+    public Path getRelativeFile() {
+        //local books are relative to the library dir to allow dir mobility and dir watching
         return file;
     }
 
-    public Integer getReadIndex() {
+    public String getFileName() {
+        return file.getFileName().toString();
+    }
+
+    public Integer getBookmark() {
         return index;
     }
 
@@ -113,19 +120,31 @@ public final class LocalBook implements Book, Serializable {
         return percentageRead;
     }
 
-    public LocalBook setReadIndex(int readIndex) {
-        return new LocalBook(file, getLanguage(), readIndex, percentageRead, gutenbergFile);
+    public LocalBook setRelativeFile(Path f) {
+        return new LocalBook(f, language, index, percentageRead, gutenbergFile, broken);
+    }
+
+    public LocalBook setLanguage(String language) {
+        return new LocalBook(file, language, index, percentageRead, gutenbergFile, broken);
+    }
+
+    public LocalBook setBookmark(int readIndex) {
+        return new LocalBook(file, language, readIndex, percentageRead, gutenbergFile, broken);
     }
 
     public LocalBook setReadPercentage(float readPercentage) {
-        return new LocalBook(file, getLanguage(), index, readPercentage, gutenbergFile);
+        return new LocalBook(file, language, index, readPercentage, gutenbergFile, broken);
+    }
+
+    public LocalBook setBroken(boolean b) {
+        return new LocalBook(file, language, index, percentageRead, gutenbergFile, b);
     }
 
     public boolean isGutenbergFile() {
         return gutenbergFile;
     }
 
-    public Map<Property, Object> getMetadata() {
+    public synchronized Map<Property, Object> getMetadata() {
         if (metadata == null) {
             metadata = new EnumMap<>(Property.class);
             metadata.put(Property.REFORMAT, true);
@@ -137,12 +156,85 @@ public final class LocalBook implements Book, Serializable {
         return metadata;
     }
 
+    @Override
+    public int hashCode() {//only check filename on purpose
+        int hash = 3;
+        hash = 53 * hash + Objects.hashCode(this.file.getFileName());
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {//only check filename on purpose
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final LocalBook other = (LocalBook) obj;
+        if (!Objects.equals(this.file.getFileName(), other.file.getFileName())) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * ***** Non immutable parts start here ********
+     */
+    /**
+     * IsBroken is a less costly way to check for broken files than
+     * book.notExists(). This is assured by a startup library task that checks
+     * for broken files and a directory watcher that sets this too,
+     *
+     * @return
+     */
+    public boolean isBroken() {
+        return !Library.rootAvailable || broken;
+    }
+
+    /**
+     * A localfile doesn't exist, if the library doesn't exist; or the file does
+     * not exist as a absolute file
+     *
+     * @return exists in the current library
+     */
+    public boolean notExists() {
+        return !Library.rootAvailable || Files.notExists(Library.libraryRoot.resolve(file));
+    }
+
+    /**
+     * @return absolute local URL, may not exist!
+     */
     public URL getURL() {
         try {
-            return file.toUri().toURL();
+            //local books are relative to the library dir to allow dir mobility and dir watching
+            return getAbsoluteFile().toUri().toURL();
         } catch (MalformedURLException ex) {
             throw new AssertionError("Impossible!", ex);
         }
+    }
+
+    /**
+     * @return absolute file path, may not exist!
+     */
+    public Path getAbsoluteFile() {
+        //local books are relative to the library dir to allow dir mobility and dir watching
+        return Library.libraryRoot.resolve(file);
+    }
+
+    /**
+     * ****** Mutables end here ********
+     */
+    /**
+     *
+     * @return tuple with the best effort authors and title. The format parsed
+     * is:
+     *
+     * AuthorName '&|and' 2ndAuthorName '-' Title.extension
+     */
+    @Override
+    public Tuples.T2<String[], String> authorsAndTitle() {
+        return sanatizeFilename(file.getFileName().toString());
     }
 
     private static String authorPreprocessing(String authors) {
@@ -154,10 +246,9 @@ public final class LocalBook implements Book, Serializable {
     }
 
     /**
-     * encodes a way to parse the authors and title from a string.
-     * this can handle author names separated by '&' or ' and ', and
-     * can handle authors/title separators like '-'
-     * so if you control these use them.
+     * encodes a way to parse the authors and title from a string. this can
+     * handle author names separated by '&' or ' and ', and can handle
+     * authors/title separators like '-' so if you control these use them.
      */
     private static Tuples.T2<String[], String> sanatizeFilename(String bookName) {
         //strip extension
@@ -187,6 +278,12 @@ public final class LocalBook implements Book, Serializable {
         }
         //        System.out.println(Arrays.toString(authorsArr)+" "+bookFileName+" "+Thread.currentThread().getName());
         return Tuples.createPair(authorsArr, bookName);
+    }
+
+    boolean haveEqualParents(LocalBook canonical) {
+        Path parent = getRelativeFile().getParent();
+        Path otherParent = canonical.getRelativeFile().getParent();
+        return parent == otherParent || (parent != null && parent.equals(otherParent));
     }
 
     private static final class GutenbergTransformer implements ParserListener {
@@ -234,7 +331,6 @@ public final class LocalBook implements Book, Serializable {
                 doc.remove(endTagIndex, doc.getLength() - endTagIndex);
                 doc.remove(0, textStartIndex);
 
-
                 //italicise gutenberg txt files
                 String name = (String) properties.get(Property.EXTRACTED_FILENAME);
                 if (!name.endsWith(".txt")) {
@@ -263,23 +359,12 @@ public final class LocalBook implements Book, Serializable {
         }
     }
 
-    public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final LocalBook other = (LocalBook) obj;
-        if (!Objects.equals(this.file, other.file)) {
-            return false;
-        }
-        return true;
+    //TODO move these up to the Book interface in java 8
+    public static final void addPropertyChangeListener(String property, PropertyChangeListener l) {
+        pipe.addPropertyChangeListener(property, l);
     }
 
-    public int hashCode() {
-        int hash = 5;
-        hash = 67 * hash + Objects.hashCode(this.file);
-        return hash;
+    public static final void removePropertyChangeListener(String property, PropertyChangeListener l) {
+        pipe.removePropertyChangeListener(property, l);
     }
 }

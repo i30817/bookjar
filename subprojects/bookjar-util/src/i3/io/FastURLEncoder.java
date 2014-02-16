@@ -15,8 +15,6 @@ package i3.io;
 import java.io.*;
 import java.net.URLEncoder;
 import java.util.BitSet;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Copied from a google library. This is deprecated

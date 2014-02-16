@@ -1,53 +1,54 @@
 package i3.ui;
 
-import i3.swing.dynamic.DynamicSwingWorker;
-import i3.swing.dynamic.DynamicListener;
-import i3.swing.dynamic.DynamicRunnable;
-import i3.swing.SearchIterator;
-import i3.swing.Bind;
 import de.spieleck.app.cngram.NGramProfiles;
+import i3.io.FastURLEncoder;
+import i3.io.IoUtils;
 import i3.main.Book;
 import i3.main.Bookjar;
+import i3.main.Library;
 import i3.main.LocalBook;
+import i3.net.AuthentificationProxySelector;
+import i3.notifications.Notification;
+import i3.notifications.NotificationDisplayer;
+import static i3.notifications.NotificationDisplayer.Category.*;
+import static i3.notifications.NotificationDisplayer.Priority.HIGH;
+import i3.notifications.StatusLineElement;
+import i3.swing.Bind;
+import i3.swing.SearchIterator;
+import i3.swing.component.ClockField;
+import i3.swing.component.FlowPanelBuilder;
+import i3.swing.component.FullScreenFrame;
+import i3.swing.component.GlassPane;
+import i3.swing.component.LabelButton;
+import i3.swing.dynamic.DynamicListener;
+import i3.swing.dynamic.DynamicRunnable;
+import i3.swing.dynamic.DynamicSwingWorker;
 import i3.ui.controller.MovingPane;
+import i3.util.DefaultUndoManager;
 import java.awt.*;
 import java.awt.event.*;
 import java.beans.*;
 import java.io.*;
 import java.net.*;
-import java.nio.file.Paths;
+import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.logging.*;
 import javax.swing.*;
 import javax.swing.text.Position.Bias;
 import org.jdesktop.swingx.JXCollapsiblePane;
 import org.jdesktop.swingx.StackLayout;
-import i3.util.Call;
-import i3.util.DefaultUndoManager;
-import i3.io.FastURLEncoder;
-import i3.io.IoUtils;
-import static i3.io.IoUtils.*;
-import i3.net.AuthentificationProxySelector;
-import static i3.swing.SwingUtils.*;
-import i3.swing.component.ClockField;
-import i3.swing.component.FlowPanelBuilder;
-import i3.swing.component.FullScreenFrame;
-import i3.swing.component.GlassPane;
-import i3.swing.component.LabelButton;
-import i3.util.Factory;
-import i3.util.Iterators;
-import java.util.Arrays;
 
 public final class Application implements Serializable {
 
     private static final long serialVersionUID = -17574584503570422L;
     //initialized in readObject
-    private final BookMarks bookList = new BookMarks();
+    private final LibraryView bookList = new LibraryView();
     final Bind actions = new Bind();
     final FullScreenFrame frame = new FullScreenFrame();
     final MovingPane pane = new MovingPane();
     boolean showClock = false;
-    File chooserStartFile = new File("");
     //singleton, used throught the program
     public transient static Application app;
     //Objects default initialized (in addComponents)
@@ -112,22 +113,26 @@ public final class Application implements Serializable {
         popup = new JPopupMenu();
         percentageButton = new LabelButton(Key.Popup_percent.getAction());
         undoButton = new LabelButton(Key.Undo.getAction());
-        undoButton.setText("[ \u25c0 ]");
         redoButton = new LabelButton(Key.Redo.getAction());
+        //override the normal action name to be symbolic here (textual in shortcuts)
+        undoButton.setText("[ \u25c0 ]");
         redoButton.setText("[ \u25b6 ]");
+
         //substance is stubborn (empty border will do nothing)
         percentageButton.putClientProperty("substancelaf.buttonnominsize", true);
         undoButton.putClientProperty("substancelaf.buttonnominsize", true);
         redoButton.putClientProperty("substancelaf.buttonnominsize", true);
         //Add actions to a popupmenu.
         JPopupMenu rightClickMenu = new JPopupMenu();
-        rightClickMenu.add(Key.Add_books.getAction());
-        rightClickMenu.add(Key.Toggle_library.getAction());
-        rightClickMenu.add(Key.Toggle_gutenberg.getAction());
+        JMenuItem toggleLib = new JMenuItem(Key.Toggle_library.getAction());
+        JMenuItem toggleGut = new JMenuItem(Key.Toggle_gutenberg.getAction());
+        rightClickMenu.add(toggleLib);
+        rightClickMenu.add(toggleGut);
         rightClickMenu.add(Key.Toggle_fullscreen.getAction());
         rightClickMenu.add(Key.Increase_font.getAction());
         rightClickMenu.add(Key.Decrease_font.getAction());
         rightClickMenu.addSeparator();
+        rightClickMenu.add(Key.Select_library_directory.getAction());
         rightClickMenu.add(Key.Options.getAction());
         pane.getView().setComponentPopupMenu(rightClickMenu);
         bookList.getView().setComponentPopupMenu(rightClickMenu);
@@ -145,14 +150,11 @@ public final class Application implements Serializable {
 
         popup.add(new PopupPanel(pane, undoRedo));
 
-        Action forward = Key.Move_forward.getAction();
-        Action backward = Key.Move_backward.getAction();
-        Action open = Key.Add_books.getAction();
+        JButton back = new JButton(Key.Move_backward.getAction());
+        mainButton.setAction(Key.Move_forward.getAction());
+        JButton options = new JButton(Key.Options.getAction());
 
-        final JButton back = new JButton(backward);
-        mainButton.setAction(forward);
-        final JButton openFiles = new JButton(open);
-        final Font font = new java.awt.Font("Monospaced", java.awt.Font.BOLD, percentageButton.getFont().getSize() + 2);
+        Font font = new java.awt.Font("Monospaced", java.awt.Font.BOLD, percentageButton.getFont().getSize() + 2);
         percentageButton.setFont(font);
         undoButton.setFont(font);
         redoButton.setFont(font);
@@ -166,7 +168,7 @@ public final class Application implements Serializable {
         final JPanel topPanel = new JPanel(flowLayout);
         topPanel.add(back);
         topPanel.add(mainButton);
-        topPanel.add(openFiles);
+        topPanel.add(options);
         topPanel.setOpaque(false);
 
         final JPanel bottomPanel = new JPanel();
@@ -177,8 +179,11 @@ public final class Application implements Serializable {
         bottomPanel.add(undoButton);
         bottomPanel.add(redoButton);
         bottomPanel.add(Box.createHorizontalGlue());
-        bottomPanel.add(clock);
+
+        bottomPanel.add(new StatusLineElement().getStatusLineElement());
         gap = LayoutStyle.getInstance().getContainerGap(clock, SwingConstants.EAST, bottomPanel);
+        bottomPanel.add(Box.createRigidArea(new Dimension(gap, 0)));
+        bottomPanel.add(clock);
         bottomPanel.add(Box.createRigidArea(new Dimension(gap, 0)));
 
         buttonsPane.setLayout(new StackLayout());
@@ -193,14 +198,8 @@ public final class Application implements Serializable {
     }
 
     private void addListeners() {
-        final URLDropCallback callback = new URLDropCallback();
-        listenToDrop(pane.getView(), callback);
-        listenToDrop(bookList.getView(), callback);
         mainPanel.addMouseWheelListener(new WheelPageMovement());
-
-        bookList.addMouseListener(new MouseClickRead());
-        bookList.getInputMap().put(KeyStroke.getKeyStroke("pressed ENTER"), "click");
-        bookList.getActionMap().put("click", new ClickRead());
+        bookList.setAction(Key.List_select_book.getAction());
 
         undoRedo.addPropertyChangeListener(new PropertyChangeListener() {
             @Override
@@ -214,11 +213,10 @@ public final class Application implements Serializable {
         pane.addPropertyChangeListener(MovingPane.MOUSE_CLICK_HYPERLINK, DynamicListener.createEventListener(this, "hyperLinkClicked"));
         pane.addPropertyChangeListener(MovingPane.MOUSE_ENTER_HYPERLINK, DynamicListener.createEventListener(this, "hyperLinkEntered"));
         pane.addPropertyChangeListener(MovingPane.MOUSE_EXIT_HYPERLINK, DynamicListener.createEventListener(this, "hyperLinkExited"));
-    }
 
-    public void read(final String fileName) {
-        URL url = IoUtils.toURL(Paths.get(fileName));
-        read(url);
+        LocalBook.addPropertyChangeListener(Book.LIBRARY_CHANGE, new LibraryUpdateListener());
+        //after all registation, read the library state and possibly send events
+        bookList.validateLibrary();
     }
 
     public void moveForward() {
@@ -240,27 +238,29 @@ public final class Application implements Serializable {
         showList(false);
     }
 
-    public void read(final URL uri) {
+    public void read(final LocalBook book) {
+        if (book.notExists()) {
+            //error path to prevent most 'file removed under us' errors
+            return;
+        }
         saveCurrentBookIndex();
-        String name = getName(uri);
+        String name = book.getFileName();
         blockView(name, "Reading " + name);
-        DynamicSwingWorker.createWithFinished(this, "swingWorkerReadFinished", "swingWorkerRead", uri).execute();
+        DynamicSwingWorker.createWithFinished(this, "swingWorkerReadFinished", "swingWorkerRead", book).execute();
     }
 
     /**
-     * Returns if it had success or not
+     * @param book to read
+     * @return returns if it had success or not
      */
-    public Boolean swingWorkerRead(URL url) {
+    public Boolean swingWorkerRead(LocalBook book) {
         try {
-            LocalBook bookmark = bookList.createIfAbsent(url);
-            pane.read(url, bookmark.getReadIndex(), bookmark.getMetadata());
-            startLanguageFinderThread(bookmark);
+            pane.read(book.getURL(), book.getBookmark(), book.getMetadata());
+            startLanguageFinderThread(book);
             return true;
-        } catch (IOException excp) {
-            bookList.remove(Arrays.asList(url));
-            Bookjar.log.log(Level.WARNING, "Removing bookmark because of IoException while attempting to read it");
-        } catch (Exception e) {
-            Bookjar.log.log(Level.SEVERE, "Non I/O bug", e);
+        } catch (IOException e) {
+            //do not remove books since they can be repaired
+            Bookjar.log.log(Level.SEVERE, "fatal error reading " + book, e);
         }
         return false;
     }
@@ -321,36 +321,27 @@ public final class Application implements Serializable {
         buttonsPane.setCollapsed(!buttonsPane.isCollapsed());
     }
 
-    public BookMarks getBookMarks() {
+    public LibraryView getLibraryView() {
         return bookList;
     }
 
     private void saveCurrentBookIndex() {
-        final URL key = pane.getURL();
+        final Path key = IoUtils.toFile(pane.getURL());
         if (key == null) {
             return;
         }
         final int index = pane.getIndex();
         final float lastVisiblePercentage = pane.getLastVisiblePercentage();
-        Bookjar.log.info("Saving " + key.getFile() + " " + index + " " + lastVisiblePercentage);
+        assert !Float.isNaN(lastVisiblePercentage);
         bookList.withLock(new Runnable() {
             @Override
             public void run() {
                 LocalBook book = bookList.get(key);
-                //key was removed, probably in the exception catch in read
                 if (book != null) {
-                    bookList.put(key, book.setReadIndex(index).setReadPercentage(lastVisiblePercentage));
+                    bookList.replace(book.setBookmark(index).setReadPercentage(lastVisiblePercentage));
                 }
             }
         });
-    }
-
-    private class URLDropCallback implements Call<java.util.List<URL>> {
-
-        @Override
-        public void run(java.util.List<URL> arguments) {
-            read(arguments.get(0));
-        }
     }
 
     public void showPopup(ActionEvent evt) {
@@ -397,6 +388,10 @@ public final class Application implements Serializable {
     public void hyperLinkExited(final PropertyChangeEvent evt) {
         Cursor defaultCursor = Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR);
         frame.setCursor(defaultCursor);
+    }
+
+    public void sortLibrary() {
+        bookList.sortLibrary();
     }
 
     public void showFind() {
@@ -463,24 +458,36 @@ public final class Application implements Serializable {
 
     public void removeSelectedBooks() throws Exception {
         if (bookList.isViewVisible()) {
-            bookList.remove(Iterators.iterable(bookList.getSelected(), new Factory<URL, LocalBook>(){
-                @Override
-                public URL create(LocalBook arg) {
-                    return arg.getURL();
-                }
-            }));
+            bookList.removeBooks(bookList.getSelected());
         }
     }
 
     public void openSelectedBookFolders() {
-        if (bookList.isViewVisible()) {
-            for (LocalBook selected : bookList.getSelected()) {
-                try {
-                    Desktop.getDesktop().open(selected.getFile().getParent().toFile());
-                } catch (IOException ex) {
-                    Bookjar.log.log(Level.SEVERE, "Exception opening folder", ex);
-                }
+        if (!bookList.isViewVisible()) {
+            return;
+        }
+        Set<Path> books = new HashSet<>();
+        for (LocalBook selected : bookList.getSelected()) {
+            Path fileToOpen = selected.getAbsoluteFile();
+            fileToOpen = fileToOpen.getParent();
+            if (fileToOpen != null) {
+                books.add(fileToOpen);
             }
+        }
+        for (Path file : books) {
+            try {
+                Desktop.getDesktop().open(file.toFile());
+            } catch (IOException ex) {
+                Bookjar.log.log(Level.SEVERE, "exception opening folder", ex);
+            }
+        }
+    }
+
+    public void listSelected() {
+        for (LocalBook book : bookList.getSelected()) {
+            showList(false);
+            read(book);
+            break;
         }
     }
 
@@ -511,36 +518,34 @@ public final class Application implements Serializable {
     private transient Executor exe;
     private transient NGramProfiles profiles;
 
-    private void startLanguageFinderThread(LocalBook bookmark) throws IOException {
-        if (bookmark.getDisplayLanguage() != null) {
+    private void startLanguageFinderThread(LocalBook book) throws IOException {
+        if (book.getDisplayLanguage() != null) {
             return;
         }
         if (profiles == null) {
             profiles = new NGramProfiles();
-        }
-        if (exe == null) {
             exe = Executors.newSingleThreadExecutor();
         }
-        exe.execute(i3.swing.dynamic.DynamicRunnable.create(this, "discoverLanguage", bookmark.getURL()));
+        exe.execute(i3.swing.dynamic.DynamicRunnable.create(this, "discoverLanguage", book));
     }
 
-    public void discoverLanguage(final URL book) {
+    public void discoverLanguage(final LocalBook book) {
         NGramProfiles.Ranker ranker = profiles.getRanker();
-        int end = Math.min(pane.getLength(), 2500);
+        int end = Math.min(pane.getLength(), 5500);
         ranker.account(pane.getText(0, end));
         NGramProfiles.RankResult result = ranker.getRankResult();
-        if (result.getScore(0) < 0.7F) {
+        if (result.getScore(0) < 0.6F) {
             //too low to be conclusive
             return;
         }
-        final BookMarks marks = getBookMarks();
+        final LibraryView marks = getLibraryView();
         final String language = result.getName(0);
         marks.withLock(new Runnable() {
             @Override
             public void run() {
-                LocalBook currentBook = marks.get(book);
-                if (book != null) {
-                    marks.put(book, currentBook.setLanguage(language));
+                LocalBook currentBook = marks.get(book.getAbsoluteFile());
+                if (currentBook != null) {
+                    marks.replace(currentBook.setLanguage(language));
                 }
             }
         });
@@ -560,29 +565,77 @@ public final class Application implements Serializable {
         }
     }
 
-    private class MouseClickRead extends MouseAdapter {
+    public class LibraryUpdateListener implements PropertyChangeListener {
+
+        Notification libraryNotif;
 
         @Override
-        public void mouseClicked(MouseEvent evt) {
-            if (evt.getClickCount() <= 1 || evt.getButton() != MouseEvent.BUTTON1) {
-                return;
+        public void propertyChange(PropertyChangeEvent evt) {
+            //only one notification for this property. It either is solved or not
+            if (libraryNotif != null) {
+                libraryNotif.clear();
             }
-            URL clicked = bookList.locationToURL(evt.getPoint());
-            if (clicked != null) {
-                showList(false);
-                read(clicked);
-            }
+
+            boolean libExists = !Library.libraryNotExists();
+            Key.Toggle_gutenberg.getAction().setEnabled(libExists);
+            Key.Close_gutenberg.getAction().setEnabled(libExists);
+            Key.Toggle_library.getAction().setEnabled(libExists);
+            Key.Close_library.getAction().setEnabled(libExists);
+            Key.Remove_books.getAction().setEnabled(libExists);
+            Key.Open_folders.getAction().setEnabled(libExists);
+            Key.List_select_book.getAction().setEnabled(libExists);
+            Key.Sort_library.getAction().setEnabled(libExists);
+
+            EventQueue.invokeLater(DynamicRunnable.create(this, "libNotification", evt.getNewValue()));
         }
-    }
 
-    private class ClickRead extends AbstractAction {
+        public void libNotification(Library.LibraryUpdate update) {
+            String shortMsg;
+            String longMsg;
+            NotificationDisplayer.Category category;
+            NotificationDisplayer n = NotificationDisplayer.getDefault();
 
-        @Override
-        public void actionPerformed(ActionEvent evt) {
-            for (LocalBook b : bookList.getSelected()) {
+            if (update.available) {
+                //1: show info if it didn't add/repair any books and the user has no books before/after calling
+                boolean wasEmptyIsEmpty = update.previousBooks == 0 && update.addedBooks == 0 && update.repairedBooks == 0;
+                //2a: special warning if not found any book the user had
+                boolean wasFullIsEmpty = update.previousBooks != 0 && update.missingBooks == update.previousBooks;
+                //2b: show warning it didn't find all books that the user had before calling
+                boolean wasFullIsMissing = update.previousBooks != 0 && update.missingBooks > 0;
+                if (wasEmptyIsEmpty) {
+                    shortMsg = "The library is empty";
+                    longMsg = "(" + Library.getRoot() + ") did not add books, please C&P book files or select a new directory";
+                    libraryNotif = n.notify(shortMsg, null, longMsg, null, NotificationDisplayer.Priority.LOW, INFO);
+                } else if (wasFullIsEmpty) {
+                    shortMsg = "The library is missing all previous books";
+                    longMsg = "(" + Library.getRoot() + ") is missing all the previous books, click to repair";
+                    libraryNotif = n.notify(shortMsg, null, longMsg, Key.Select_library_directory.getAction(), HIGH, WARNING);
+                } else if (wasFullIsMissing) {
+                    shortMsg = "The library is missing some books";
+                    longMsg = "(" + Library.getRoot() + ") is missing " + update.missingBooks + " out of " + update.previousBooks + " previous books, click to repair";
+                    libraryNotif = n.notify(shortMsg, null, longMsg, Key.Select_library_directory.getAction(), HIGH, WARNING);
+                }
+                if (wasEmptyIsEmpty || wasFullIsEmpty || wasFullIsMissing) {
+                    buttonsPane.setCollapsed(false);
+                    showList(false);
+                } else {
+                    showList(true);
+                }
+            } else {
+                //1: show warning if it doesn't exist and the user has no books in lib
+                //2: show error if it doesn't exist and the user has books in lib (everything broken)
+                buttonsPane.setCollapsed(false);
                 showList(false);
-                read(b.getURL());
-                break;
+                if (update.previousBooks == 0) {
+                    shortMsg = "The library is not set";
+                    longMsg = "Click to select a directory to use as a library";
+                    category = WARNING;
+                } else {
+                    shortMsg = "The library directory is invalid";
+                    longMsg = "(" + Library.getRoot() + ") is invalid, click to select a directory to repair";
+                    category = ERROR;
+                }
+                libraryNotif = n.notify(shortMsg, null, longMsg, Key.Select_library_directory.getAction(), HIGH, category);
             }
         }
     }

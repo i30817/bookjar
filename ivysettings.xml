@@ -11,6 +11,8 @@
             <ibiblio name="netbeans" root="http://bits.netbeans.org/maven2" m2compatible="true" />
             <ibiblio name="Nexus Legacy" root="http://repository.ow2.org/nexus/content/repositories/ow2-legacy" m2compatible="true" />
             <ibiblio name="eaio" root="http://eaio.com/maven2" m2compatible="true" />
+            <ibiblio name="timboudreau.com builds" root="http://timboudreau.com/builds/plugin/repository/everything" m2compatible="true" />
+<!--            <ibiblio name="sonatype" root="http://oss.sonatype.org/service/local/staging/deploy/maven2/" m2compatible="true" /> -->
         </chain>
     </resolvers>
 

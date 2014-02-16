@@ -23,8 +23,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutionException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.JFileChooser;
@@ -34,10 +32,10 @@ import i3.dragndrop.DropStrategy;
 import i3.io.IoUtils;
 
 /**
- * A static swing util class.
- * All methods of this class are not thread safe,
- * as should be obvious from the name. Swing, you know... like
- * almost all GUI is not thread safe.
+ * A static swing util class. All methods of this class are not thread safe, as
+ * should be obvious from the name. Swing, you know... like almost all GUI is
+ * not thread safe.
+ *
  * @author i30817
  */
 public final class SwingUtils {
@@ -46,9 +44,9 @@ public final class SwingUtils {
     }
 
     /**
-     * Call this to install a url oriented drop listener that
-     * waits for some common drop events (files, url and text).
-     * It invokes the URL callback with 1 url.
+     * Call this to install a url oriented drop listener that waits for some
+     * common drop events (files, url and text). It invokes the URL callback
+     * with 1 url.
      */
     public static void listenToDrop(final Component c, final Call<List<URL>> urlCallback) {
         final Factory<DropStrategy, DataFlavor[]> f = new DefaultURLDropFactory(urlCallback);
@@ -56,17 +54,16 @@ public final class SwingUtils {
     }
 
     /**
-     * Call this to install a drop listener that waits for drop events
-     * for the choosen "best" DataFlavor.
-     * The factory must choose the DataFlavor it is interested in
-     * by sorting and/or selection for example, then return a drop
-     * strategy that handles that type.
-     * If it doesn't handle the type, it should throw IllegalArgumentException
+     * Call this to install a drop listener that waits for drop events for the
+     * chosen "best" DataFlavor. The factory must choose the DataFlavor it is
+     * interested in by sorting and/or selection for example, then return a drop
+     * strategy that handles that type. If it doesn't handle the type, it should
+     * throw IllegalArgumentException
      */
     public static void listenToDrop(final Component c, final Factory<DropStrategy, DataFlavor[]> factory) {
         DropTargetListener listener = new DropTargetAdapter() {
 
-            DropStrategy choosenDropStrategy;
+            DropStrategy chosenDropStrategy;
 
             @Override
             public void dragEnter(DropTargetDragEvent dtde) {
@@ -76,10 +73,9 @@ public final class SwingUtils {
                     return;
                 }
 
-
                 try {
                     //choose the "best" flavor and return a correct drop strategy
-                    choosenDropStrategy = factory.create(flavors);
+                    chosenDropStrategy = factory.create(flavors);
                 } catch (Exception ex) {
                     IoUtils.log.warning("Drop rejected: " + ex.getMessage());
                     dtde.rejectDrag();
@@ -88,15 +84,15 @@ public final class SwingUtils {
 
             @Override
             public void drop(DropTargetDropEvent dtde) {
-                if (choosenDropStrategy == null) {
+                if (chosenDropStrategy == null) {
                     dtde.dropComplete(false);
                     return;
                 }
                 try {
-                    choosenDropStrategy.drop(dtde);
+                    chosenDropStrategy.drop(dtde);
                     dtde.dropComplete(true);
                 } catch (Exception ex) {
-                    IoUtils.log.warning("Couldn't drop object: "+ex.getMessage());
+                    IoUtils.log.warning("Couldn't drop object: " + ex.getMessage());
                     dtde.dropComplete(false);
                 }
             }
@@ -105,8 +101,9 @@ public final class SwingUtils {
     }
 
     /**
-     * Returns an action that opens the filechooser
-     * invokes call.call(File ... f) with the selected files
+     * Returns an action that opens the filechooser ands invokes call.call(File
+     * ... f) with the selected files
+     *
      * @param actionName
      * @param longDescription
      * @param mnemomic can be null
@@ -122,10 +119,10 @@ public final class SwingUtils {
     }
 
     /**
-     * a swingworker delegation object that is initialized with the selected files
-     * before being executed, and that queries for some lazy config values
+     * a swingworker delegation object that is initialized with the selected
+     * files before being executed, and that queries for some lazy config values
      */
-    public static abstract class ChooserCallback<T, V> {
+    public static abstract class ChooserCallback<RET, CHUNK> {
 
         protected final CopyOnWriteArraySet<File> selectedPaths = new CopyOnWriteArraySet<>();
 
@@ -145,22 +142,43 @@ public final class SwingUtils {
         protected abstract File getStartFile();
 
         /**
-         * @see javax.swing.SwingWorker#doInBackground()
+         * @see javax.swing.JFileChooser#isMultiSelectionEnabled() default false
          */
-        protected abstract T doInBackground() throws Exception;
-
-        /**
-         * @see javax.swing.SwingWorker#done()
-         * @see javax.swing.SwingWorker#get()
-         *
-         */
-        protected void done(T returnValue) {
+        protected boolean getMultiSelectionEnabled() {
+            return false;
         }
 
         /**
-         * @see javax.swing.SwingWorker#process(java.util.List)
+         * @see javax.swing.JFileChooser#getFileMode() default
+         * JFileChooser.FILES_AND_DIRECTORIES
          */
-        protected void process(List<V> chunks) {
+        protected int getFileMode() {
+            return JFileChooser.FILES_AND_DIRECTORIES;
+        }
+
+        /**
+         * User accepted file chooser and now is working on a swingworker thread
+         *
+         * @see javax.swing.SwingWorker#doInBackground()
+         */
+        protected abstract RET doInBackground() throws Exception;
+
+        /**
+         * User finished working on a swingworker thread and now receives the
+         * final value on the EDT.
+         *
+         * {@link javax.swing.SwingWorker#done()}
+         * {@link javax.swing.SwingWorker#get()}
+         *
+         */
+        protected void done(RET returnValue) {
+        }
+
+        /**
+         * User canceled the chooser.
+         */
+        protected void cancelChooser() {
+
         }
     }
 
@@ -180,8 +198,8 @@ public final class SwingUtils {
                 chooser = new JFileChooser(call.getStartFile());
                 chooser.setDialogType(JFileChooser.OPEN_DIALOG);
                 chooser.setDialogTitle((String) getValue(Action.NAME));
-                chooser.setMultiSelectionEnabled(true);
-                chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+                chooser.setMultiSelectionEnabled(call.getMultiSelectionEnabled());
+                chooser.setFileSelectionMode(call.getFileMode());
             }
             return true;
         }
@@ -190,7 +208,11 @@ public final class SwingUtils {
         public void actionPerformed(ActionEvent e) {
             Frame parentRef = call.getParentFrame();
             if (parentRef != null && initFileChooser() && JFileChooser.APPROVE_OPTION == chooser.showOpenDialog(parentRef)) {
-                call.setSelectedFiles(chooser.getSelectedFiles());
+                if (chooser.isMultiSelectionEnabled()) {
+                    call.setSelectedFiles(chooser.getSelectedFiles());
+                } else {
+                    call.setSelectedFiles(chooser.getSelectedFile());
+                }
                 new SwingWorker<T, V>() {
 
                     @Override
@@ -203,16 +225,14 @@ public final class SwingUtils {
                     }
 
                     @Override
-                    protected void process(List<V> chunks) {
-                        call.process(chunks);
-                    }
-
-                    @Override
                     protected T doInBackground() throws Exception {
                         return call.doInBackground();
                     }
                 }.execute();
+            } else {
+                call.cancelChooser();
             }
+
         }
 
         private void writeObject(ObjectOutputStream out) throws IOException {
@@ -222,9 +242,9 @@ public final class SwingUtils {
     }
 
     /**
-     * Run the runnable in the edt, and awaits completion
-     * If the runnable throws an exception it is wrapped in
-     * a IllegalStateException
+     * Run the runnable in the edt, and awaits completion If the runnable throws
+     * an exception it is wrapped in a IllegalStateException
+     *
      * @throws IllegalStateException
      */
     public static void runInEDTAndWait(Runnable r) {
@@ -240,9 +260,8 @@ public final class SwingUtils {
     }
 
     /**
-     * Run the runnable in the edt. If we are in the edt
-     * it awaits completion, otherwise, it invokes it later
-     * in the edt and continues.
+     * Run the runnable in the edt. If we are in the edt it awaits completion,
+     * otherwise, it invokes it later in the edt and continues.
      */
     public static void runInEDT(Runnable r) {
         if (EventQueue.isDispatchThread()) {

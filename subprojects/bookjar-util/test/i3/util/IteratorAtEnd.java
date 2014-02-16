@@ -31,7 +31,6 @@ package i3.util;
  */
 
 import java.util.*;
-import java.util.concurrent.*;
 
 /**
  * Copied from the jdk source, removed the classes i didn't want to test from realMain.

@@ -4,7 +4,6 @@ import i3.util.Strings;
 import i3.util.Factory;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -24,21 +23,14 @@ import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.net.URLStreamHandler;
 import java.nio.charset.Charset;
-import java.nio.file.DirectoryStream;
-import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.PosixFilePermission;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ThreadFactory;
-import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -47,6 +39,7 @@ import org.mozilla.universalchardet.UniversalDetector;
 
 /**
  * A static util IO class.
+ *
  * @author i30817
  */
 public final class IoUtils {
@@ -58,13 +51,12 @@ public final class IoUtils {
     private static Pattern whiteList = Pattern.compile("[^\\p{L}&&[^\\p{Digit}&-.\\[\\]]]", Pattern.CANON_EQ | Pattern.UNICODE_CASE);
 
     /**
-     * Returns a smaller than 256 chars file with all characters
-     * except the alphanumerics and whitespace and some others
-     * turned to whitespace
-     * (escapes illegal chars in all platforms).
-     * This method assumes the parent is safe, ie, it has
-     * no illegal character in the file name, is less than 256 chars, existss
-     * and can be writen as a directory.
+     * Returns a smaller than 256 chars file with all characters except the
+     * alphanumerics and whitespace and some others turned to whitespace
+     * (escapes illegal chars in all platforms). This method assumes the parent
+     * is safe, ie, it has no illegal character in the file name, is less than
+     * 256 chars, exists and can be written as a directory.
+     *
      * @param parent not null, writable
      * @param name
      * @return
@@ -104,7 +96,9 @@ public final class IoUtils {
 
     /**
      * Finds the parent directory of the class given
-     *  @throws IllegalArgumentException if the class given is not loaded by a local file classloader
+     *
+     * @throws IllegalArgumentException if the class given is not loaded by a
+     * local file classloader
      */
     public static Path getApplicationDirectory(Class applicationClass) {
         if (applicationClass == null) {
@@ -125,7 +119,7 @@ public final class IoUtils {
                 szUrl = szUrl.substring("jar:".length(), szUrl.lastIndexOf('!'));
                 URI uri = new URI(szUrl);
                 return Paths.get(uri).getParent();
-            } catch (URISyntaxException e) {
+            } catch (URISyntaxException | NullPointerException e) {
                 throw new AssertionError(e);
             }
         } else if (szUrl.startsWith("file:")) {
@@ -141,20 +135,21 @@ public final class IoUtils {
     }
 
     /**
-     * Finds the location of a given class file on the file system.
-     * Throws an IOException if the class cannot be found.
+     * Finds the location of a given class file on the file system. Throws an
+     * IOException if the class cannot be found.
      * <br>
-     * If the class is in an archive (JAR, ZIP), then the returned object
-     * will point to the archive file.
+     * If the class is in an archive (JAR, ZIP), then the returned object will
+     * point to the archive file.
      * <br>
-     * If the class is in a directory, the base directory will be returned
-     * with the package directory removed.
+     * If the class is in a directory, the base directory will be returned with
+     * the package directory removed.
      * <br>
-     * The <code>File.isDirectory()</code> method can be used to
-     * determine which is the case.
+     * The <code>File.isDirectory()</code> method can be used to determine which
+     * is the case.
      * <br>
-     * @param c    a given class
-     * @return    a File object
+     *
+     * @param c a given class
+     * @return a File object
      * @throws IOException
      */
     public static Path getClassLocation(Class c) throws IOException, FileNotFoundException {
@@ -209,25 +204,26 @@ public final class IoUtils {
     }
 
     /**
-     * Deletes a file hierarchy.
-     * If it is a directory, all sub-files and directories will be
-     * deleted.
+     * Deletes a file hierarchy. If it is a directory, all sub-files and
+     * directories will be deleted.
+     *
      * @param path
      * @return
      */
     public static boolean deleteFileOrDir(Path path) {
+        if (!Files.isWritable(path)) {
+            return false;
+        }
         try {
             Files.walkFileTree(path, new FileVisitors.DeleteTreeVisitor());
         } catch (IOException ex) {
             return false;
         }
-
         return true;
     }
 
     /**
-     * This method kills this program and starts
-     * the given one.
+     * This method kills this program and starts the given one.
      */
     public static void restart(Class klass, String... args) {
         try {
@@ -277,10 +273,10 @@ public final class IoUtils {
     }
 
     /**
-     * Adds a shutdown hook that will be run when
-     * the program terminates.
+     * Adds a shutdown hook that will be run when the program terminates.
      *
      * The hooks will fail on unix when sent a SIGKILL (killl -9)
+     *
      * @param r
      */
     public static void addShutdownHook(final Runnable r) {
@@ -290,12 +286,11 @@ public final class IoUtils {
     }
 
     /**
-     * This method creates a new process that will run a new jvm
-     * on the main of the given class, with the selected arguments.
-     * It already flushes the output and inputstream of the forked jvm
-     * into the current jvm.
-     * The forked jvm uses the same java.exe and classpath as the current
-     * one.
+     * This method creates a new process that will run a new jvm on the main of
+     * the given class, with the selected arguments. It already flushes the
+     * output and inputstream of the forked jvm into the current jvm. The forked
+     * jvm uses the same java.exe and classpath as the current one.
+     *
      * @param javaClass class with main method
      * @param args jvm properties.
      * @return Process, the jvm process, already started
@@ -320,12 +315,11 @@ public final class IoUtils {
     }
 
     /**
-     * This method creates a new process that will run a new jvm
-     * on the main of the given class, with the selected arguments.
-     * It already flushes the output and inputstream of the forked jvm
-     * into the current jvm.
-     * The forked jvm uses the same java.exe and classpath as the current
-     * one.
+     * This method creates a new process that will run a new jvm on the main of
+     * the given class, with the selected arguments. It already flushes the
+     * output and inputstream of the forked jvm into the current jvm. The forked
+     * jvm uses the same java.exe and classpath as the current one.
+     *
      * @param javaClass class with main method
      * @param args jvm properties.
      */
@@ -353,7 +347,9 @@ public final class IoUtils {
     }
 
     /**
-     * This method downloads a file from the url into a local file if the file doesn't exist
+     * This method downloads a file from the url into a local file if the file
+     * doesn't exist
+     *
      * @param localFile
      * @return the file
      * @throws java.io.IOException
@@ -372,6 +368,7 @@ public final class IoUtils {
 
     /**
      * If possible transforms the url to a file
+     *
      * @param url given url
      * @return a file from the url, or null if not a file
      */
@@ -471,6 +468,7 @@ public final class IoUtils {
 
     /**
      * Transforms the file into a URL
+     *
      * @param file given file
      * @return a url from the file. Not null.
      */
@@ -484,8 +482,8 @@ public final class IoUtils {
     }
 
     /**
-     * Transforms the file into a URL with a given
-     * content type
+     * Transforms the file into a URL with a given content type
+     *
      * @param file given file
      * @param the content type
      * @return a url from the file. Not null.
@@ -525,9 +523,9 @@ public final class IoUtils {
 
     /**
      * Transforms a InputStream into a "fake" URL.
+     *
      * @param streamFactory InputStream factory not null.
-     * @param contentType not null, not checked
-     * for validness.
+     * @param contentType not null, not checked for validness.
      * @param charset can be null, not checked for validness
      * @return a url from the InputStream. Not null.
      */
@@ -591,10 +589,11 @@ public final class IoUtils {
 
     /**
      * Probe the charset using a char matching
-     * @param i the inputstream to probe. IF you want
-     * to reset it you need to do it externally
-     * @param limit use the limit so this method doesn't
-     * overflow the reset buffer (maximum size read).
+     *
+     * @param i the inputstream to probe. IF you want to reset it you need to do
+     * it externally
+     * @param limit use the limit so this method doesn't overflow the reset
+     * buffer (maximum size read).
      * @return the charset found or null if none found
      */
     public static String probeCharset(InputStream i, int limit) {
@@ -624,10 +623,10 @@ public final class IoUtils {
     }
 
     /**
-     * Use this to find a html charset sequence in a byte array
-     * (translated to utf-8), no attempt is made to rewind or close
-     * the inputstream (with a BufferedInputStream). That is the
-     * responsibility of the caller.
+     * Use this to find a html charset sequence in a byte array (translated to
+     * utf-8), no attempt is made to rewind or close the inputstream (with a
+     * BufferedInputStream). That is the responsibility of the caller.
+     *
      * @param i the byte source.
      * @param limit the read limit.
      * @return the charset found or null if none found
@@ -660,18 +659,21 @@ public final class IoUtils {
     }
 
     /**
-     * For html files: a convience method that is a  combination of the
+     * For html files: a convience method that is a combination of the
      * parseCharset and probeCharset, to try the hardest to find the valid
      * charset.
      *
      * You shouldn't use the mark/reset, since the method will do that for you.
      * You should also reuse the given stream if you want to read for something
-     * else since the underlying stream of the bufferedstream is probably drained.
+     * else since the underlying stream of the bufferedstream is probably
+     * drained.
      *
      * If it fails anyway, it returns the defaultReturnCharset as default
-     * @param i inputstream, preferably not buffered
-     * (this method creates a buffer to use). Not closed by the method
-     * @param limit the number of bytes in the stream to read to try to determine the charset
+     *
+     * @param i inputstream, preferably not buffered (this method creates a
+     * buffer to use). Not closed by the method
+     * @param limit the number of bytes in the stream to read to try to
+     * determine the charset
      * @param defaultReturnCharset returned instead of null if both methods fail
      * should be a valid charset.
      * @return a charset or defaultReturnCharset
@@ -790,6 +792,7 @@ public final class IoUtils {
 
     /**
      * Creates a ThreadFactory
+     *
      * @param deamon
      */
     public static ThreadFactory createThreadFactory(final boolean deamon) {
@@ -798,6 +801,7 @@ public final class IoUtils {
 
     /**
      * Creates a ThreadFactory
+     *
      * @param deamon
      */
     public static ThreadFactory createThreadFactory(final boolean deamon, final String name) {
@@ -805,11 +809,10 @@ public final class IoUtils {
     }
 
     /**
-     * Given a input, pattern
-     * and String factory
-     * attempts to replace all the occurrences of matched pattern
-     * with the result of the string factory.
+     * Given a input, pattern and String factory attempts to replace all the
+     * occurrences of matched pattern with the result of the string factory.
      * Equivalent of a replaceAll(in,p,0,factory) call
+     *
      * @param in
      * @param p
      * @param factory - if an exception is thrown an error is raised
@@ -820,10 +823,10 @@ public final class IoUtils {
     }
 
     /**
-     * Given a input, pattern, pattern group number to replace,
-     * and String factory
-     * attempts to replace all the occurrences of the given group
-     * inside the matched pattern with the result of the string factory.
+     * Given a input, pattern, pattern group number to replace, and String
+     * factory attempts to replace all the occurrences of the given group inside
+     * the matched pattern with the result of the string factory.
+     *
      * @param in
      * @param p
      * @param groupToReplace
@@ -848,14 +851,14 @@ public final class IoUtils {
     }
 
     /**
-     * Given a input, pattern, pattern group number to replace,
-     * and String
-     * attempts to replace all the occurrences of the given group
-     * with the string.
+     * Given a input, pattern, pattern group number to replace, and String
+     * attempts to replace all the occurrences of the given group with the
+     * string.
+     *
      * @param in
      * @param p
-     * @param replacement the copied StringBuilder without the given
-     * group in the pattern.
+     * @param replacement the copied StringBuilder without the given group in
+     * the pattern.
      * @return a copy CharSequence with the selected group replaced.
      */
     public static CharSequence replaceAll(CharSequence in, Pattern p, int groupToReplace, String replacement) {
@@ -872,10 +875,10 @@ public final class IoUtils {
     }
 
     /**
-     * Reads inputstream r into array a until it can't read
-     * no more or the array is full. Its the calle responsability
-     * to call inputstream mark / reset if trying to use this
-     * as a transient operation.
+     * Reads inputstream r into array a until it can't read no more or the array
+     * is full. Its the calle responsability to call inputstream mark / reset if
+     * trying to use this as a transient operation.
+     *
      * @param r
      * @param a
      * @param close close the reader r
@@ -898,8 +901,9 @@ public final class IoUtils {
     }
 
     /**
-     * Reads inputstream i into a String with the UTF-8 charset
-     * until the inputstream is finished (don't use with infinite streams).
+     * Reads inputstream i into a String with the UTF-8 charset until the
+     * inputstream is finished (don't use with infinite streams).
+     *
      * @param inputStream to read into a string
      * @param close if true, close the inputstream
      * @return a string
@@ -927,9 +931,9 @@ public final class IoUtils {
     }
 
     /**
-     * Reads CharSequence a into writer w.
-     * Don't use this with a buffered writer, since it also
-     * buffers...
+     * Reads CharSequence a into writer w. Don't use this with a buffered
+     * writer, since it also buffers...
+     *
      * @param input
      * @param output
      * @param closeOutput
@@ -949,11 +953,9 @@ public final class IoUtils {
                 output.write(sub.toString());
                 start += 1000;
 
-
             }
             output.write(input.subSequence(start, input.length()).toString());
             output.flush();
-
 
         } finally {
             if (closeOutput) {
@@ -963,9 +965,8 @@ public final class IoUtils {
     }
 
     /**
-     * This function reads a input into a output and optionally
-     * closes the streams.
-     * Don't use this with a buffered output stream, since it also
+     * This function reads a input into a output and optionally closes the
+     * streams. Don't use this with a buffered output stream, since it also
      * buffers...
      *
      * @param input
@@ -993,13 +994,11 @@ public final class IoUtils {
     }
 
     /**
-     * This function reads a input into a output and optionally
-     * closes the streams.
-     * Don't use this with a buffered output stream, since it also
-     * buffers...
-     * You can pass a runnable to run on each iteration of
-     * a read-write pass, continuation style. You don't control
-     * the period of the writes though.
+     * This function reads a input into a output and optionally closes the
+     * streams. Don't use this with a buffered output stream, since it also
+     * buffers... You can pass a runnable to run on each iteration of a
+     * read-write pass, continuation style. You don't control the period of the
+     * writes though.
      *
      * @param input
      * @param closeInput
