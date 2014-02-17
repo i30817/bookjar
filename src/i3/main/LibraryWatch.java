@@ -41,12 +41,13 @@ public final class LibraryWatch {
                         continue;
                     }
                     WatchEvent<Path> ev = (WatchEvent<Path>) event;
-                    Path file = ev.context();
+                    Path file = ((Path) key.watchable()).resolve((Path) event.context());
                     if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
                         if (Files.isDirectory(file)) {
                             file.register(dirTreeWatcher, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE);
                         } else {
-                            library.createIfAbsent(libraryRoot.resolve(file), null, false);
+                            System.out.println("CREATED: " + file);
+                            library.createIfAbsent(file, null, false);
                         }
                     } else if (kind == StandardWatchEventKinds.ENTRY_DELETE) {
                         if (Files.isDirectory(file)) {

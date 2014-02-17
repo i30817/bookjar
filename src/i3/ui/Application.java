@@ -10,6 +10,7 @@ import i3.main.LocalBook;
 import i3.net.AuthentificationProxySelector;
 import i3.notifications.Notification;
 import i3.notifications.NotificationDisplayer;
+import i3.notifications.NotificationDisplayer.Category;
 import static i3.notifications.NotificationDisplayer.Category.*;
 import static i3.notifications.NotificationDisplayer.Priority.HIGH;
 import i3.notifications.StatusLineElement;
@@ -214,7 +215,7 @@ public final class Application implements Serializable {
         pane.addPropertyChangeListener(MovingPane.MOUSE_ENTER_HYPERLINK, DynamicListener.createEventListener(this, "hyperLinkEntered"));
         pane.addPropertyChangeListener(MovingPane.MOUSE_EXIT_HYPERLINK, DynamicListener.createEventListener(this, "hyperLinkExited"));
 
-        LocalBook.addPropertyChangeListener(Book.LIBRARY_CHANGE, new LibraryUpdateListener());
+        Library.addPropertyChangeListener(Library.LIBRARY_CHANGE, new LibraryUpdateListener());
         //after all registation, read the library state and possibly send events
         bookList.validateLibrary();
     }
@@ -590,10 +591,9 @@ public final class Application implements Serializable {
         }
 
         public void libNotification(Library.LibraryUpdate update) {
-            String shortMsg;
-            String longMsg;
-            NotificationDisplayer.Category category;
-            NotificationDisplayer n = NotificationDisplayer.getDefault();
+            String shortMsg = null;
+            String longMsg = null;
+            Category category = null;
 
             if (update.available) {
                 //1: show info if it didn't add/repair any books and the user has no books before/after calling
@@ -604,20 +604,22 @@ public final class Application implements Serializable {
                 boolean wasFullIsMissing = update.previousBooks != 0 && update.missingBooks > 0;
                 if (wasEmptyIsEmpty) {
                     shortMsg = "The library is empty";
-                    longMsg = "(" + Library.getRoot() + ") did not add books, please C&P book files or select a new directory";
-                    libraryNotif = n.notify(shortMsg, null, longMsg, null, NotificationDisplayer.Priority.LOW, INFO);
+                    longMsg = "(" + update.libraryRoot + ") did not add books, please C&P book files or select a new directory";
+                    category = INFO;
                 } else if (wasFullIsEmpty) {
                     shortMsg = "The library is missing all previous books";
-                    longMsg = "(" + Library.getRoot() + ") is missing all the previous books, click to repair";
-                    libraryNotif = n.notify(shortMsg, null, longMsg, Key.Select_library_directory.getAction(), HIGH, WARNING);
+                    longMsg = "(" + update.libraryRoot + ") is missing all the previous books, click to repair";
+                    category = WARNING;
                 } else if (wasFullIsMissing) {
-                    shortMsg = "The library is missing some books";
-                    longMsg = "(" + Library.getRoot() + ") is missing " + update.missingBooks + " out of " + update.previousBooks + " previous books, click to repair";
-                    libraryNotif = n.notify(shortMsg, null, longMsg, Key.Select_library_directory.getAction(), HIGH, WARNING);
+                    shortMsg = "The library is missing books";
+                    longMsg = "(" + update.libraryRoot + ") is missing " + update.missingBooks + " out of " + update.previousBooks + " previous books, click to repair";
+                    category = WARNING;
                 }
                 if (wasEmptyIsEmpty || wasFullIsEmpty || wasFullIsMissing) {
                     buttonsPane.setCollapsed(false);
                     showList(false);
+                    NotificationDisplayer n = NotificationDisplayer.getDefault();
+                    libraryNotif = n.notify(shortMsg, null, longMsg, Key.Select_library_directory.getAction(), HIGH, category);
                 } else {
                     showList(true);
                 }
@@ -632,9 +634,10 @@ public final class Application implements Serializable {
                     category = WARNING;
                 } else {
                     shortMsg = "The library directory is invalid";
-                    longMsg = "(" + Library.getRoot() + ") is invalid, click to select a directory to repair";
+                    longMsg = "(" + update.libraryRoot + ") is invalid, click to select a directory to repair";
                     category = ERROR;
                 }
+                NotificationDisplayer n = NotificationDisplayer.getDefault();
                 libraryNotif = n.notify(shortMsg, null, longMsg, Key.Select_library_directory.getAction(), HIGH, category);
             }
         }

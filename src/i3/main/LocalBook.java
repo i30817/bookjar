@@ -5,7 +5,6 @@ import i3.parser.Property;
 import i3.swing.SearchIterator;
 import i3.util.Strings;
 import i3.util.Tuples;
-import java.beans.PropertyChangeListener;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -359,12 +358,4 @@ public final class LocalBook implements Book, Serializable {
         }
     }
 
-    //TODO move these up to the Book interface in java 8
-    public static final void addPropertyChangeListener(String property, PropertyChangeListener l) {
-        pipe.addPropertyChangeListener(property, l);
-    }
-
-    public static final void removePropertyChangeListener(String property, PropertyChangeListener l) {
-        pipe.removePropertyChangeListener(property, l);
-    }
 }

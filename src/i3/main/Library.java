@@ -7,6 +7,8 @@ import i3.io.ObjectsReader;
 import i3.parser.BookLoader;
 import i3.thread.Threads;
 import i3.util.Strings;
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -30,6 +32,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
+import javax.swing.event.SwingPropertyChangeSupport;
 
 /**
  * methods who return Paths, return them absolute methods who take URLs or Paths
@@ -40,6 +43,11 @@ import java.util.logging.Level;
  */
 public final class Library implements Externalizable {
 
+    /**
+     * Property change key, LibraryUpdate in new value
+     */
+    public static final String LIBRARY_CHANGE = "LIBRARY_CHANGE";
+    private static final PropertyChangeSupport pipe = new SwingPropertyChangeSupport(LIBRARY_CHANGE, true);
     private static final Path libraryState = Bookjar.programLocation.resolve("library.bin");
     private static final Path partialLibraryDir = Bookjar.programLocation.resolve("b");
     private final ExecutorService libraryWatcher = Executors.newSingleThreadExecutor(IoUtils.createThreadFactory(true));
@@ -58,7 +66,7 @@ public final class Library implements Externalizable {
             libRoot = it.readOrReturn("");
 //            eventList = it.readOrReturn(new DebugList<LocalBook>());
 //            eventList.setLockCheckingEnabled(true);
-            eventList = it.readOrReturn(new BasicEventList<LocalBook>());
+            eventList = it.readOrLazyCreate(BasicEventList.class);
             if (Files.isReadable(partialLibraryDir)) {
                 FileVisitors.Files singleBookRecords = new FileVisitors.Files();
                 Files.walkFileTree(partialLibraryDir, singleBookRecords);
@@ -195,7 +203,7 @@ public final class Library implements Externalizable {
             if (it != null) {
                 LocalBook old = it.previous();
                 it.set(old.setBroken(true));
-                Bookjar.log.log(Level.WARNING, "{0} was broken on library dir", old.getFileName());
+                Bookjar.log.log(Level.WARNING, "{0} was broken", old.getFileName());
             }
         } finally {
             eventList.getReadWriteLock().writeLock().unlock();
@@ -445,14 +453,6 @@ public final class Library implements Externalizable {
     }
 
     /**
-     *
-     * @return the library root, can be null
-     */
-    public static Path getRoot() {
-        return libraryRoot;
-    }
-
-    /**
      * Sends a property change with available as the 'new' value.
      *
      * All books managed by a library will be 'broken' if this is set false, but
@@ -460,7 +460,7 @@ public final class Library implements Externalizable {
      */
     static void setLibraryAvailable(LibraryUpdate update) {
         rootAvailable = update.available;
-        Book.pipe.firePropertyChange(Book.LIBRARY_CHANGE, null, update);
+        pipe.firePropertyChange(LIBRARY_CHANGE, null, update);
     }
 
     /**
@@ -496,6 +496,14 @@ public final class Library implements Externalizable {
         return libraryRoot.resolve(relative);
     }
 
+    public static final void addPropertyChangeListener(String property, PropertyChangeListener l) {
+        pipe.addPropertyChangeListener(property, l);
+    }
+
+    public static final void removePropertyChangeListener(String property, PropertyChangeListener l) {
+        pipe.removePropertyChangeListener(property, l);
+    }
+
     private static class LastModifiedPath implements Comparator<Path> {
 
         @Override
@@ -518,6 +526,9 @@ public final class Library implements Externalizable {
         public BooksAndWatcherCollector(Path parent) throws IOException {
             this.watchTheLib = FileSystems.getDefault().newWatchService();
             this.parent = parent;
+            //watchservice is a bit funny - it wont watch a dir itself, only its immediate children
+            //work around this on the watch thread (filter siblings of library root)
+//            parent.getParent().register(watchTheLib, StandardWatchEventKinds.ENTRY_DELETE);
         }
 
         @Override
@@ -539,15 +550,17 @@ public final class Library implements Externalizable {
         }
     }
 
-    public static class LibraryUpdate {
+    public static final class LibraryUpdate {
 
         public final boolean available;
         public final int previousBooks;
         public final int addedBooks;
         public final int repairedBooks;
         public final int missingBooks;
+        public final Path libraryRoot;
 
         public LibraryUpdate(boolean available, int previousBooks, int addedBooks, int repairedBooks, int missingBooks) {
+            this.libraryRoot = Library.libraryRoot;
             this.available = available;
             this.previousBooks = previousBooks;
             this.addedBooks = addedBooks;

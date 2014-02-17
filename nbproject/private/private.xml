@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
-    <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="6">
+    <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="8">
         <file>
             <url>src/i3/main/Library.java</url>
+            <bookmark id="8">
+                <name/>
+                <line>94</line>
+                <key/>
+            </bookmark>
             <bookmark id="6">
                 <name/>
-                <line>163</line>
+                <line>171</line>
                 <key/>
             </bookmark>
         </file>
@@ -14,6 +19,11 @@
         <group>
             <file>file:/home/i30817/Documents/Netbeans_projects/bookjar/src/i3/ui/Application.java</file>
             <file>file:/home/i30817/Documents/Netbeans_projects/bookjar/src/i3/ui/ChooserCallback.java</file>
+            <file>file:/home/i30817/Documents/Netbeans_projects/bookjar/src/i3/main/LibraryWatch.java</file>
+            <file>file:/home/i30817/Documents/Netbeans_projects/bookjar/src/i3/ui/LibraryView.java</file>
+            <file>file:/home/i30817/Documents/Netbeans_projects/bookjar/src/i3/main/Bookjar.java</file>
+            <file>file:/home/i30817/Documents/Netbeans_projects/bookjar/src/i3/main/Library.java</file>
+            <file>file:/home/i30817/Documents/Netbeans_projects/bookjar/src/i3/ui/data/ReadImageFromArchive.java</file>
         </group>
     </open-files>
 </project-private>
