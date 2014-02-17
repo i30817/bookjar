@@ -5,12 +5,12 @@
             <url>src/i3/main/Library.java</url>
             <bookmark id="8">
                 <name/>
-                <line>94</line>
+                <line>102</line>
                 <key/>
             </bookmark>
             <bookmark id="6">
                 <name/>
-                <line>171</line>
+                <line>179</line>
                 <key/>
             </bookmark>
         </file>
@@ -22,6 +22,8 @@
             <file>file:/home/i30817/Documents/Netbeans_projects/bookjar/src/i3/main/LibraryWatch.java</file>
             <file>file:/home/i30817/Documents/Netbeans_projects/bookjar/src/i3/ui/LibraryView.java</file>
             <file>file:/home/i30817/Documents/Netbeans_projects/bookjar/src/i3/main/Bookjar.java</file>
+            <file>file:/home/i30817/Documents/Netbeans_projects/bookjar/src/i3/main/Book.java</file>
+            <file>file:/home/i30817/Documents/Netbeans_projects/bookjar/src/i3/main/LocalBook.java</file>
             <file>file:/home/i30817/Documents/Netbeans_projects/bookjar/src/i3/main/Library.java</file>
             <file>file:/home/i30817/Documents/Netbeans_projects/bookjar/src/i3/ui/data/ReadImageFromArchive.java</file>
         </group>

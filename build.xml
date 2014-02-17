@@ -11,6 +11,10 @@
     <description>Builds, tests, and runs the project bookjar.</description>
     <import file="nbproject/build-impl.xml"/>
 
+    <!-- flip the executable bit for convenience when using dev builds in gnome -->
+    <target name="-post-jar" >
+        <chmod file="${basedir}/dist/${ant.project.name}.jar" perm="+x" />
+    </target>
     <!--regenerate the build dependencies unless we are building on the PPA
     (where the source has to be uploaded with jars because there is no net access)
     -->
