@@ -209,7 +209,11 @@ public final class Library implements Externalizable {
         return null;
     }
 
-    void breakBookIfItExists(Path file) {
+    /**
+     *
+     * @return if the book was broken, if not it didn't exist in the Library.
+     */
+    boolean breakBook(Path file) {
         eventList.getReadWriteLock().writeLock().lock();
         try {
             ListIterator<LocalBook> it = getFirstBookForFileName(file);
@@ -217,10 +221,12 @@ public final class Library implements Externalizable {
                 LocalBook old = it.previous();
                 it.set(old.setBroken(true));
                 Bookjar.log.log(Level.WARNING, "{0} was broken", old.getFileName());
+                return true;
             }
         } finally {
             eventList.getReadWriteLock().writeLock().unlock();
         }
+        return false;
     }
 
     /**
@@ -539,21 +545,22 @@ public final class Library implements Externalizable {
 
     private static class BooksAndWatcherCollector extends FileVisitors.FilesTransformer {
 
-        private final Path parent;
+        private final Path library;
         public final WatchService watchTheLib;
 
-        public BooksAndWatcherCollector(Path parent) throws IOException {
+        public BooksAndWatcherCollector(Path library) throws IOException {
             this.watchTheLib = FileSystems.getDefault().newWatchService();
-            this.parent = parent;
-            //watchservice is a bit funny - it wont watch a dir itself, only its immediate children
+            this.library = library;
+            //watchservice wont watch a dir itself, only its immediate children
+            //(yes, previsitdirectory will visit library)
             //work around this on the watch thread (filter siblings of library root)
-//            parent.getParent().register(watchTheLib, StandardWatchEventKinds.ENTRY_DELETE);
+            library.getParent().register(watchTheLib, StandardWatchEventKinds.ENTRY_DELETE);
         }
 
         @Override
         public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
             FileVisitResult r = super.preVisitDirectory(dir, attrs);
-            if (r == FileVisitResult.CONTINUE && watchTheLib != null) {
+            if (r == FileVisitResult.CONTINUE) {
                 dir.register(watchTheLib, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE);
             }
             return r;
@@ -563,7 +570,7 @@ public final class Library implements Externalizable {
         public LocalBook accepts(Path file) {
             if (BookLoader.acceptsFiles(file.getFileName().toString())) {
                 //book found here should be relative to the library dir!
-                return new LocalBook(parent.relativize(file), null, 0, 0.0F, false, false);
+                return new LocalBook(library.relativize(file), null, 0, 0.0F, false, false);
             }
             return null;
         }

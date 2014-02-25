@@ -37,28 +37,29 @@ public final class LibraryWatch {
 
                 for (WatchEvent event : key.pollEvents()) {
                     WatchEvent.Kind kind = event.kind();
-                    if (kind == StandardWatchEventKinds.OVERFLOW) {
-                        continue;
-                    }
-                    WatchEvent<Path> ev = (WatchEvent<Path>) event;
                     Path file = ((Path) key.watchable()).resolve((Path) event.context());
-                    if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
+
+                    //siblings are pulled as a side effect of needing to register the parent of root
+                    boolean rootSibling = file.getParent().equals(libraryRoot.getParent());
+                    if (rootSibling) {
+                        assert kind == StandardWatchEventKinds.ENTRY_DELETE;
+                        if (file.getFileName().equals(libraryRoot.getFileName())) {
+                            library.setLibraryAvailable(LibraryUpdate.createBrokenLibraryEvent(library));
+                            throw new InterruptedException();
+                        }
+                    }
+
+                    if (!rootSibling && kind == StandardWatchEventKinds.ENTRY_CREATE) {
                         if (Files.isDirectory(file)) {
                             file.register(dirTreeWatcher, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE);
                         } else {
-                            System.out.println("CREATED: " + file);
                             library.createIfAbsent(file, null, false);
                         }
-                    } else if (kind == StandardWatchEventKinds.ENTRY_DELETE) {
-                        if (Files.isDirectory(file)) {
+                    } else if (!rootSibling && kind == StandardWatchEventKinds.ENTRY_DELETE) {
+                        //warning: Files.isDirectory will never be true on ENTRY_DELETE
+                        //if it is not a book in the library but was registered it was a directory
+                        if (!library.breakBook(file)) {
                             key.cancel();
-                            //uhoh
-                            if (file.equals(libraryRoot)) {
-                                library.setLibraryAvailable(LibraryUpdate.createBrokenLibraryEvent(library));
-                                throw new InterruptedException();
-                            }
-                        } else {
-                            library.breakBookIfItExists(file);
                         }
                     }
                     boolean valid = key.reset();
