@@ -33,9 +33,9 @@ import javax.swing.text.StyleConstants;
  *
  * These pojos mutable part comes from the library dir, which is a static
  * property which can change and is accessed for real locations. Therefore
- * 'notExists', 'getURL' and 'getAbsoluteFile' should not be accessed while the
- * library does not exist at the peril of nullpointer exceptions (it could
- * return a 'imaginary' path, but fail fast is better).
+ * 'getURL' and 'getAbsoluteFile' should not be accessed while the book
+ * 'notExists' at the peril of exceptions (it could return a 'imaginary' path,
+ * but fail fast is better).
  *
  * @author fc30817
  */
@@ -88,7 +88,7 @@ public final class LocalBook implements Book, Serializable {
 
     @Override
     public String toString() {
-        return file + " read:" + percentageRead + "% isGutenberg: " + gutenbergFile;
+        return file.getFileName().toString();
     }
 
     public String getDisplayLanguage() {
@@ -139,6 +139,18 @@ public final class LocalBook implements Book, Serializable {
         return new LocalBook(file, language, index, percentageRead, gutenbergFile, b);
     }
 
+    /**
+     * IsBroken is a less costly way to check for broken files than
+     * book.notExists(). This is assured by a startup library task that checks
+     * for broken files and a directory watcher that sets this too,
+     *
+     * @return if this was set to broken during program execution. Does not
+     * check for if the library or the file exists.
+     */
+    public boolean isBroken() {
+        return broken;
+    }
+
     public boolean isGutenbergFile() {
         return gutenbergFile;
     }
@@ -177,20 +189,15 @@ public final class LocalBook implements Book, Serializable {
         return true;
     }
 
+    boolean haveEqualParents(LocalBook canonical) {
+        Path parent = getRelativeFile().getParent();
+        Path otherParent = canonical.getRelativeFile().getParent();
+        return parent == otherParent || (parent != null && parent.equals(otherParent));
+    }
+
     /**
      * ***** Non immutable parts start here ********
      */
-    /**
-     * IsBroken is a less costly way to check for broken files than
-     * book.notExists(). This is assured by a startup library task that checks
-     * for broken files and a directory watcher that sets this too,
-     *
-     * @return
-     */
-    public boolean isBroken() {
-        return !Library.rootAvailable || broken;
-    }
-
     /**
      * A localfile doesn't exist, if the library doesn't exist; or the file does
      * not exist as a absolute file
@@ -277,12 +284,6 @@ public final class LocalBook implements Book, Serializable {
         }
         //        System.out.println(Arrays.toString(authorsArr)+" "+bookFileName+" "+Thread.currentThread().getName());
         return Tuples.createPair(authorsArr, bookName);
-    }
-
-    boolean haveEqualParents(LocalBook canonical) {
-        Path parent = getRelativeFile().getParent();
-        Path otherParent = canonical.getRelativeFile().getParent();
-        return parent == otherParent || (parent != null && parent.equals(otherParent));
     }
 
     private static final class GutenbergTransformer implements ParserListener {

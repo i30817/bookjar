@@ -28,6 +28,22 @@ public enum Key implements Bind.Binding {
     //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
 //these actions target needs to be late binded due to the way enum deserialization works.
     //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
+//these actions target needs to be late binded due to the way enum deserialization works.
+    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
+//these actions target needs to be late binded due to the way enum deserialization works.
+    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
+//these actions target needs to be late binded due to the way enum deserialization works.
+    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
+//these actions target needs to be late binded due to the way enum deserialization works.
+    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
+//these actions target needs to be late binded due to the way enum deserialization works.
+    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
+//these actions target needs to be late binded due to the way enum deserialization works.
+    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
+//these actions target needs to be late binded due to the way enum deserialization works.
+    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
+//these actions target needs to be late binded due to the way enum deserialization works.
+    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
     Toggle_fullscreen(DynamicAction.createAction("Set/Reset fullscreen", "Toggles full screen", LazyApp.instance, "fullScreen"), "alt ENTER"),
     Select_library_directory(i3.swing.SwingUtils.openFileChooser("Select library directory", "Monitors a directory for added and removed books - these include compressed files, but those may fail when reading", null, new ChooserCallback()), "pressed A"),
     Move_forward(DynamicAction.createAction("Forward", "Move Forward when reading a book", LazyApp.instance, "moveForward"), "pressed RIGHT"),
@@ -49,7 +65,7 @@ public enum Key implements Bind.Binding {
     Find(DynamicAction.createAction("Find", LazyApp.instance, "find"), null),
     Find_previous(DynamicAction.createAction("Previous", LazyApp.instance, "previous"), null),
     Hide_find(DynamicAction.createAction(" \u2297 ", LazyApp.instance, "hideFind"), null),
-    List_select_book(DynamicAction.createAction("Read book", LazyApp.instance, "listSelected"), null),
+    Select_book(DynamicAction.createAction("Read book", LazyApp.instance, "bookSelected"), null),
     Sort_library(DynamicAction.createAction("Sort library", LazyApp.instance, "sortLibrary"), null),
     //don't rebing the original actions directly because they need the right name to display (and so do the original)
     Close_gutenberg(DynamicAction.createEventAction(" \u2297 ", null, Toggle_gutenberg.getAction(), "actionPerformed"), null),

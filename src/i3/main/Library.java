@@ -24,6 +24,8 @@ import java.nio.file.WatchService;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.TreeSet;
@@ -35,6 +37,18 @@ import java.util.logging.Level;
 import javax.swing.event.SwingPropertyChangeSupport;
 
 /**
+ * The library collects the book metadata. It identifies books by their
+ * filename, not their complete path. To actually use the books, it joins a root
+ * dir to a book relative dir. This way, it is resistant to moving files to
+ * other places inside the library, but not renames. When validated it will
+ * 'break' non-existing books and send out a event that specifies a library
+ * update, which includes broken books how many were added/repaired or exist on
+ * the library. This can be used by clients to implement repair strategies such
+ * as asking for a new library root dir or deleting metadata completely. It also
+ * installs a file-system watcher on the library dir that breaks files if
+ * deleted or adds new ones if added. Deletion of the lib dir will trigger a
+ * notification.
+ *
  * methods who return Paths, return them absolute methods who take URLs or Paths
  * as arguments, relativize them to the library root first. Therefore, it is a
  * invariant of this class that the library root must be set to add books to it.
@@ -104,8 +118,7 @@ public final class Library implements Externalizable {
         Path root = libraryRoot;
         if (root == null || !Files.isDirectory(root)) {
             Bookjar.log.severe("Invalid library (" + root + ") requires reseting");
-            int size = size();
-            setLibraryAvailable(new LibraryUpdate(false, size, 0, 0, size));
+            setLibraryAvailable(LibraryUpdate.createBrokenLibraryEvent(this));
             libraryRoot = null;
         } else {
             //Possibly rescue broken metadata and start watching
@@ -328,8 +341,8 @@ public final class Library implements Externalizable {
         int stride = 0;
         int newBooksIndex = -1;
         int repairedNumber = 0;
-        int brokenNumber = 0;
         int listSize = 0;
+        List<LocalBook> broken = new LinkedList<>();
         eventList.getReadWriteLock().writeLock().lock();
         try {
             listSize = eventList.size();
@@ -347,9 +360,15 @@ public final class Library implements Externalizable {
                 //remove duplicates, remember they are equal with the same filename
                 LocalBook fileBased = fileBooks.remove(canonical);
                 if (fileBased == null) {
-                    it.set(canonical.setBroken(true));
-                    brokenNumber++;
-                } else if (!fileBased.haveEqualParents(canonical) && canonical.notExists()) {
+                    canonical = canonical.setBroken(true);
+                    broken.add(canonical);
+                    it.set(canonical);
+                } else if (!fileBased.haveEqualParents(canonical) || canonical.isBroken()) {
+                    //on startup, isBroken will be false, because it is initially set
+                    //in the branch above, but the parents might already be different
+                    //(with user moves which don't affect filename, otherwise the info is lost)
+                    //after startup, it is possible that by moving the library dir
+                    //some previously broken book (by above or filewatcher) becomes available
                     canonical = canonical.setRelativeFile(fileBased.getRelativeFile()).setBroken(false);
                     it.set(canonical);
                     repairedNumber++;
@@ -371,7 +390,7 @@ public final class Library implements Externalizable {
         }
 
         if (fileBooks.isEmpty()) {
-            return new LibraryUpdate(true, listSize, 0, repairedNumber, brokenNumber);
+            return LibraryUpdate.createEvent(libraryRoot, listSize, 0, repairedNumber, broken);
         }
         //this is done here and not before because it's likely that the cicle
         //above cut on a lot of books
@@ -388,7 +407,7 @@ public final class Library implements Externalizable {
         eventList.getReadWriteLock().writeLock().lock();
         try {
             eventList.addAll(newBooksIndex, sortedBooks);
-            return new LibraryUpdate(true, listSize, sortedBooks.size(), repairedNumber, brokenNumber);
+            return LibraryUpdate.createEvent(libraryRoot, listSize, sortedBooks.size(), repairedNumber, broken);
         } finally {
             eventList.getReadWriteLock().writeLock().unlock();
         }
@@ -550,22 +569,4 @@ public final class Library implements Externalizable {
         }
     }
 
-    public static final class LibraryUpdate {
-
-        public final boolean available;
-        public final int previousBooks;
-        public final int addedBooks;
-        public final int repairedBooks;
-        public final int missingBooks;
-        public final Path libraryRoot;
-
-        public LibraryUpdate(boolean available, int previousBooks, int addedBooks, int repairedBooks, int missingBooks) {
-            this.libraryRoot = Library.libraryRoot;
-            this.available = available;
-            this.previousBooks = previousBooks;
-            this.addedBooks = addedBooks;
-            this.repairedBooks = repairedBooks;
-            this.missingBooks = missingBooks;
-        }
-    }
 }

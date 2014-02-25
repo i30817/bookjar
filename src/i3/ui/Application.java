@@ -6,6 +6,7 @@ import i3.io.IoUtils;
 import i3.main.Book;
 import i3.main.Bookjar;
 import i3.main.Library;
+import i3.main.LibraryUpdate;
 import i3.main.LocalBook;
 import i3.net.AuthentificationProxySelector;
 import i3.notifications.Notification;
@@ -21,6 +22,7 @@ import i3.swing.component.FlowPanelBuilder;
 import i3.swing.component.FullScreenFrame;
 import i3.swing.component.GlassPane;
 import i3.swing.component.LabelButton;
+import i3.swing.dynamic.DynamicAction;
 import i3.swing.dynamic.DynamicListener;
 import i3.swing.dynamic.DynamicRunnable;
 import i3.swing.dynamic.DynamicSwingWorker;
@@ -200,7 +202,7 @@ public final class Application implements Serializable {
 
     private void addListeners() {
         mainPanel.addMouseWheelListener(new WheelPageMovement());
-        bookList.setAction(Key.List_select_book.getAction());
+        bookList.setAction(Key.Select_book.getAction());
 
         undoRedo.addPropertyChangeListener(new PropertyChangeListener() {
             @Override
@@ -484,7 +486,7 @@ public final class Application implements Serializable {
         }
     }
 
-    public void listSelected() {
+    public void bookSelected() {
         for (LocalBook book : bookList.getSelected()) {
             showList(false);
             read(book);
@@ -584,42 +586,44 @@ public final class Application implements Serializable {
             Key.Close_library.getAction().setEnabled(libExists);
             Key.Remove_books.getAction().setEnabled(libExists);
             Key.Open_folders.getAction().setEnabled(libExists);
-            Key.List_select_book.getAction().setEnabled(libExists);
+            Key.Select_book.getAction().setEnabled(libExists);
             Key.Sort_library.getAction().setEnabled(libExists);
-
             EventQueue.invokeLater(DynamicRunnable.create(this, "libNotification", evt.getNewValue()));
         }
 
-        public void libNotification(Library.LibraryUpdate update) {
+        public void libNotification(LibraryUpdate update) {
             String shortMsg = null;
             String longMsg = null;
             Category category = null;
+            ActionListener resolve = Key.Select_library_directory.getAction();
 
             if (update.available) {
                 //1: show info if it didn't add/repair any books and the user has no books before/after calling
                 boolean wasEmptyIsEmpty = update.previousBooks == 0 && update.addedBooks == 0 && update.repairedBooks == 0;
                 //2a: special warning if not found any book the user had
-                boolean wasFullIsEmpty = update.previousBooks != 0 && update.missingBooks == update.previousBooks;
+                boolean wasFullIsEmpty = update.previousBooks != 0 && update.broken.size() == update.previousBooks;
                 //2b: show warning it didn't find all books that the user had before calling
-                boolean wasFullIsMissing = update.previousBooks != 0 && update.missingBooks > 0;
+                boolean wasFullIsMissing = update.previousBooks != 0 && !update.broken.isEmpty();
                 if (wasEmptyIsEmpty) {
                     shortMsg = "The library is empty";
                     longMsg = "(" + update.libraryRoot + ") did not add books, please C&P book files or select a new directory";
                     category = INFO;
                 } else if (wasFullIsEmpty) {
                     shortMsg = "The library is missing all previous books";
-                    longMsg = "(" + update.libraryRoot + ") is missing all the previous books, click to repair";
+                    longMsg = "(" + update.libraryRoot + ") is missing all the previous books, click here to repair";
                     category = WARNING;
                 } else if (wasFullIsMissing) {
                     shortMsg = "The library is missing books";
-                    longMsg = "(" + update.libraryRoot + ") is missing " + update.missingBooks + " out of " + update.previousBooks + " previous books, click to repair";
+                    longMsg = "(" + update.libraryRoot + ") is missing " + update.broken.size() + " out of " + update.previousBooks + " previous books, click to remove permanently";
                     category = WARNING;
+                    resolve = DynamicAction.createAction(null, this, "booksMissing", update);
+                    Bookjar.log.warning("missing " + update.broken);
                 }
                 if (wasEmptyIsEmpty || wasFullIsEmpty || wasFullIsMissing) {
                     buttonsPane.setCollapsed(false);
                     showList(false);
                     NotificationDisplayer n = NotificationDisplayer.getDefault();
-                    libraryNotif = n.notify(shortMsg, null, longMsg, Key.Select_library_directory.getAction(), HIGH, category);
+                    libraryNotif = n.notify(shortMsg, null, longMsg, resolve, HIGH, category);
                 } else {
                     showList(true);
                 }
@@ -638,7 +642,15 @@ public final class Application implements Serializable {
                     category = ERROR;
                 }
                 NotificationDisplayer n = NotificationDisplayer.getDefault();
-                libraryNotif = n.notify(shortMsg, null, longMsg, Key.Select_library_directory.getAction(), HIGH, category);
+                libraryNotif = n.notify(shortMsg, null, longMsg, resolve, HIGH, category);
+            }
+        }
+
+        public void booksMissing(LibraryUpdate update) {
+            bookList.removeBooks(update.broken);
+            //unlike the Select_library_directory action, this won't trigger a update
+            if (libraryNotif != null) {
+                libraryNotif.clear();
             }
         }
     }

@@ -54,8 +54,7 @@ public final class LibraryWatch {
                             key.cancel();
                             //uhoh
                             if (file.equals(libraryRoot)) {
-                                int size = library.size();
-                                library.setLibraryAvailable(new Library.LibraryUpdate(false, size, 0, 0, size));
+                                library.setLibraryAvailable(LibraryUpdate.createBrokenLibraryEvent(library));
                                 throw new InterruptedException();
                             }
                         } else {
