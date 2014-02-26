@@ -586,8 +586,8 @@ public final class Application implements Serializable {
             Key.Close_library.getAction().setEnabled(libExists);
             Key.Remove_books.getAction().setEnabled(libExists);
             Key.Open_folders.getAction().setEnabled(libExists);
-            Key.Select_book.getAction().setEnabled(libExists);
             Key.Sort_library.getAction().setEnabled(libExists);
+            Key.Select_book.getAction().setEnabled(libExists);
             EventQueue.invokeLater(DynamicRunnable.create(this, "libNotification", evt.getNewValue()));
         }
 
@@ -620,18 +620,11 @@ public final class Application implements Serializable {
                     Bookjar.log.warning("missing " + update.broken);
                 }
                 if (wasEmptyIsEmpty || wasFullIsEmpty || wasFullIsMissing) {
-                    buttonsPane.setCollapsed(false);
-                    showList(false);
-                    NotificationDisplayer n = NotificationDisplayer.getDefault();
-                    libraryNotif = n.notify(shortMsg, null, longMsg, resolve, HIGH, category);
-                } else {
-                    showList(true);
+                    showNotificaton(shortMsg, longMsg, resolve, category);
                 }
             } else {
                 //1: show warning if it doesn't exist and the user has no books in lib
                 //2: show error if it doesn't exist and the user has books in lib (everything broken)
-                buttonsPane.setCollapsed(false);
-                showList(false);
                 if (update.previousBooks == 0) {
                     shortMsg = "The library is not set";
                     longMsg = "Click to select a directory to use as a library";
@@ -641,9 +634,17 @@ public final class Application implements Serializable {
                     longMsg = "(" + update.libraryRoot + ") is invalid, click to select a directory to repair";
                     category = ERROR;
                 }
-                NotificationDisplayer n = NotificationDisplayer.getDefault();
-                libraryNotif = n.notify(shortMsg, null, longMsg, resolve, HIGH, category);
+                showNotificaton(shortMsg, longMsg, resolve, category);
             }
+        }
+
+        private void showNotificaton(String shortMsg, String longMsg, ActionListener resolve, Category category) {
+            showList(false);
+            buttonsPane.setAnimated(false);
+            buttonsPane.setCollapsed(false);
+            buttonsPane.setAnimated(true);
+            NotificationDisplayer n = NotificationDisplayer.getDefault();
+            libraryNotif = n.notify(shortMsg, null, longMsg, resolve, HIGH, category);
         }
 
         public void booksMissing(LibraryUpdate update) {

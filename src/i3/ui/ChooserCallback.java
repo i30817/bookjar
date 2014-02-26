@@ -29,4 +29,13 @@ final class ChooserCallback extends SwingUtils.ChooserCallback<Boolean, Void> {
         //run in this thread
         return Application.app.getLibraryView().updateLibrary(library).call();
     }
+
+    @Override
+    protected void done(Boolean returnValue) {
+        //only show in user initiated validations, not on startup validation
+        //problems are show in the library update listener
+        if (returnValue) {
+            Application.app.showList(true);
+        }
+    }
 }
