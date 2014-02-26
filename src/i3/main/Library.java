@@ -176,13 +176,14 @@ public final class Library implements Externalizable {
      */
     public Callable<Boolean> updateLibrary(final Path parent) {
         final boolean libChanged = setLibrary(parent);
+        rootAvailable = true;
         return new Callable<Boolean>() {
             @Override
             public Boolean call() throws IOException {
                 final BooksAndWatcherCollector result = new BooksAndWatcherCollector(parent);
                 Files.walkFileTree(parent, result);
                 replaceWatchdog(result.watchTheLib, parent);
-                LibraryUpdate update = Library.this.validateLibrary(result.canonicalMap);
+                LibraryUpdate update = Library.this.validateBooks(result.canonicalMap);
                 boolean booksChanged = update.addedBooks > 0 || update.repairedBooks > 0;
                 if (booksChanged || libChanged) {
                     saveMultipleRecords();
@@ -343,7 +344,7 @@ public final class Library implements Externalizable {
         saveSingularRecord(value);
     }
 
-    private LibraryUpdate validateLibrary(Map<LocalBook, LocalBook> fileBooks) {
+    private LibraryUpdate validateBooks(Map<LocalBook, LocalBook> fileBooks) {
         int stride = 0;
         int newBooksIndex = -1;
         int repairedNumber = 0;
