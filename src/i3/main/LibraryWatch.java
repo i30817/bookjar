@@ -44,7 +44,7 @@ public final class LibraryWatch {
                     if (rootSibling) {
                         assert kind == StandardWatchEventKinds.ENTRY_DELETE;
                         if (file.getFileName().equals(libraryRoot.getFileName())) {
-                            library.setLibraryAvailable(LibraryUpdate.createBrokenLibraryEvent(library));
+                            library.sendUpdate(LibraryUpdate.createBrokenLibraryEvent(library));
                             throw new InterruptedException();
                         }
                     }

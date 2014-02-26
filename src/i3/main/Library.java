@@ -118,7 +118,7 @@ public final class Library implements Externalizable {
         Path root = libraryRoot;
         if (root == null || !Files.isDirectory(root)) {
             Bookjar.log.severe("Invalid library (" + root + ") requires reseting");
-            setLibraryAvailable(LibraryUpdate.createBrokenLibraryEvent(this));
+            sendUpdate(LibraryUpdate.createBrokenLibraryEvent(this));
             libraryRoot = null;
         } else {
             //Possibly rescue broken metadata and start watching
@@ -176,7 +176,6 @@ public final class Library implements Externalizable {
      */
     public Callable<Boolean> updateLibrary(final Path parent) {
         final boolean libChanged = setLibrary(parent);
-        rootAvailable = true;
         return new Callable<Boolean>() {
             @Override
             public Boolean call() throws IOException {
@@ -188,7 +187,7 @@ public final class Library implements Externalizable {
                 if (booksChanged || libChanged) {
                     saveMultipleRecords();
                 }
-                Library.setLibraryAvailable(update);
+                Library.sendUpdate(update);
                 return booksChanged;
             }
         };
@@ -469,12 +468,13 @@ public final class Library implements Externalizable {
      * @return library changed
      * @throws IllegalArgumentExceptio not a directory or null
      */
-    static boolean setLibrary(final Path newLib) throws IllegalArgumentException {
+    private static boolean setLibrary(final Path newLib) throws IllegalArgumentException {
         if (newLib == null || !Files.isDirectory(newLib)) {
             throw new IllegalArgumentException("null, non existent or non directory given " + newLib);
         }
         Path old = libraryRoot;
         libraryRoot = newLib;
+        rootAvailable = true;
         return !newLib.equals(old);
     }
 
@@ -484,8 +484,8 @@ public final class Library implements Externalizable {
      * All books managed by a library will be 'broken' if this is set false, but
      * when it is set true, they will recover, if not set to broken meanwhile.
      */
-    static void setLibraryAvailable(LibraryUpdate update) {
-        rootAvailable = update.available;
+    static void sendUpdate(LibraryUpdate update) {
+        rootAvailable = update.available;//for external callers
         pipe.firePropertyChange(LIBRARY_CHANGE, null, update);
     }
 
