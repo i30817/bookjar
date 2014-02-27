@@ -53,6 +53,18 @@ import javax.swing.event.SwingPropertyChangeSupport;
  * as arguments, relativize them to the library root first. Therefore, it is a
  * invariant of this class that the library root must be set to add books to it.
  *
+ * This class is only externalizable to be able to be used on serializable
+ * classes without transient, which complicates deserialization, it uses its own
+ * serialization protocol: on shutdown or used book change you should call
+ * 'replace' with the updated book you were using, 'CreateIfAbsent' serializes a
+ * default version of the book and 'removeBooks' and 'validateLibrary' save all
+ * of the collection. This was done since the updates would need to happen
+ * explicitly anyway, since LocalBook is immutable, and it's much safer and
+ * faster to serialize piecemeal, preventing corruption bugs of the whole
+ * collection from impatient O.S. shutdown killing the process. This uses a
+ * different serialization file backend than the normal one automatically, to
+ * prevent modifications from other classes invalidating the stream.
+ *
  * @author i30817
  */
 public final class Library implements Externalizable {

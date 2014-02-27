@@ -15,9 +15,9 @@ import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
 /**
- * Updates document properties.
- * This class receives a Document, but does not prevent its
- * garbage collection.
+ * Updates document properties. This class receives a Document, but does not
+ * prevent its garbage collection.
+ *
  * @author i30817
  */
 public class DocumentStyle implements Style {
@@ -282,7 +282,7 @@ public class DocumentStyle implements Style {
                     unlock.setAccessible(true);
                     unlock.invoke(doc);
                 }
-            } catch (    NoSuchMethodException | IllegalAccessException | InvocationTargetException ex) {
+            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ex) {
                 throw new AssertionError(ex);
             }
         } else {
@@ -310,11 +310,11 @@ public class DocumentStyle implements Style {
 
     /**
      * Function that returns the character attributes that are never shown.
-     * Override this method to change them.
-     * Default never shown attributes:
+     * Override this method to change them. Default never shown attributes:
      * StyleConstants.Background, StyleConstants.ComposedTextAttribute,
      * StyleConstants.Size
-     * @return the denied charater attributes
+     *
+     * @return the denied character attributes
      */
     protected Object[] deniedCharacterAttributes() {
         return new Object[]{StyleConstants.Background, StyleConstants.ComposedTextAttribute, StyleConstants.Size};

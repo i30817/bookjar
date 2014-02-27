@@ -18,9 +18,9 @@ final class DenialSet implements Serializable {
 
     private static final long serialVersionUID = 752647115562277465L;
     /**
-     * The attribute set that holds the Caracter StyleConstants that we
-     * want to deny. The allowed ones are represented by the static functions
-     * in this class.
+     * The attribute set that holds the Caracter StyleConstants that we want to
+     * deny. The allowed ones are represented by the static functions in this
+     * class.
      */
     private final SimpleAttributeSet deniability = new SimpleAttributeSet();
     /**
@@ -38,8 +38,10 @@ final class DenialSet implements Serializable {
     private transient Object[] deny = new Object[0];
 
     /**
-     * If you're using the returned atribute set in documentSetCharactersAttributes,
-     * you need to set the replace flag to false (jdk bug).
+     * If you're using the returned atribute set in
+     * documentSetCharactersAttributes, you need to set the replace flag to
+     * false (jdk bug).
+     *
      * @param attributes
      * @param parent
      * @return
@@ -70,8 +72,8 @@ final class DenialSet implements Serializable {
      * Returns the given attributeset. This in conjuntion with
      * deprocessAttributes has the effect of denying or allowing attributes
      * existing when the method is invoked. If you do this more than once the
-     * old state is lost. It also removes any denied attributes from the function
-     * denyCharacterAttributes(Object ...). This state is also lost.
+     * old state is lost. It also removes any denied attributes from the
+     * function denyCharacterAttributes(Object ...). This state is also lost.
      */
     public AttributeSet replaceAttributes(AttributeSet attributes, AttributeSet parent) {
         MutableAttributeSet delegate = new SimpleAttributeSet(attributes);
@@ -98,7 +100,7 @@ final class DenialSet implements Serializable {
     }
 
     /**
-     * Restores the state based on the inicial values given in processAttributes
+     * Restores the state based on the initial values given in processAttributes
      * and the current denial state. The current state is lost.
      */
     public AttributeSet processAttributes(AttributeSet attributes) {
@@ -127,8 +129,9 @@ final class DenialSet implements Serializable {
     }
 
     /**
-     * Sets the character attributes that are always removed
-     * form the registered attributesets
+     * Sets the character attributes that are always removed form the registered
+     * attributesets
+     *
      * @param o
      */
     public void denyCharacterAttributes(final Object[] o) {
@@ -138,8 +141,8 @@ final class DenialSet implements Serializable {
     }
 
     /**
-     * A way to see if the class is allowing the showing of
-     * a constant. Normally they are StyleConstants.
+     * A way to see if the class is allowing the showing of a constant. Normally
+     * they are StyleConstants.
      */
     public boolean isShowing(final Object constant) {
         if (constant.equals(StyleConstants.ComponentAttribute)) {
