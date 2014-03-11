@@ -19,7 +19,7 @@ public final class CoverSearchOrRandom<E extends Book> extends Cancelable {
     private final int imageWidth;
     private final int imageHeight;
     private final String name;
-    private boolean enableImageSearch = false;
+    private boolean enableImageSearch = true;
 
     public CoverSearchOrRandom(String name, E book, ImageList<E> list, int imageWidth, int imageHeight) {
         this.list = list;
