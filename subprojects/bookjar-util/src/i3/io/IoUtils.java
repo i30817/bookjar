@@ -1,7 +1,7 @@
 package i3.io;
 
-import i3.util.Strings;
 import i3.util.Factory;
+import i3.util.Strings;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.Closeable;
@@ -31,10 +31,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ThreadFactory;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.logging.log4j.LogManager;
 import org.mozilla.universalchardet.UniversalDetector;
 
 /**
@@ -43,8 +42,6 @@ import org.mozilla.universalchardet.UniversalDetector;
  * @author i30817
  */
 public final class IoUtils {
-
-    public static final Logger log = Logger.getAnonymousLogger();
 
     private IoUtils() {
     }
@@ -186,8 +183,19 @@ public final class IoUtils {
         throw new FileNotFoundException(szUrl);
     }
 
+    public static boolean validateOrCreateDir(Path dir) {
+        boolean success = false;
+        try {
+            if (!Files.exists(dir)) {
+                Files.createDirectories(dir);
+            }
+            success = Files.isWritable(dir) && Files.isDirectory(dir);
+        } catch (IOException | SecurityException ex) {
+        }
+        return success;
+    }
+
     public static boolean validateOrCreateDir(Path dir, String failureMessage) {
-        //create dir, assume program location valid
         boolean success = false;
         try {
             if (!Files.exists(dir)) {
@@ -197,10 +205,10 @@ public final class IoUtils {
         } catch (IOException | SecurityException ex) {
         } finally {
             if (!success) {
-                IoUtils.log.info(failureMessage);
+                LogManager.getLogger().info(failureMessage);
             }
-            return success;
         }
+        return success;
     }
 
     /**
@@ -230,7 +238,7 @@ public final class IoUtils {
             Runtime.getRuntime().addShutdownHook(new RestartProcessShutDownHook(klass, args));
             Runtime.getRuntime().exit(0);
         } catch (Exception ex) {
-            IoUtils.log.log(Level.SEVERE, "Could not restart the program", ex);
+            LogManager.getLogger().error("could not restart the program", ex);
         }
     }
 
@@ -262,12 +270,12 @@ public final class IoUtils {
                     }
                 }
             } catch (Exception ex) {
-                IoUtils.log.log(Level.SEVERE, "Couldn't wait for other shutdown hooks", ex);
+                LogManager.getLogger().error("couldn't wait for other shutdown hooks", ex);
             }
             try {
                 forkJava(mainKlass, arguments);
             } catch (IOException | InterruptedException ex) {
-                IoUtils.log.log(Level.SEVERE, "Couldn't fork java", ex);
+                LogManager.getLogger().error("couldn't fork java", ex);
             }
         }
     }
@@ -281,7 +289,6 @@ public final class IoUtils {
      */
     public static void addShutdownHook(final Runnable r) {
         Thread thread = new Thread(r, "IoUtils.ShutdownHook");
-        thread.setPriority(Thread.MAX_PRIORITY);
         Runtime.getRuntime().addShutdownHook(thread);
     }
 
@@ -516,7 +523,7 @@ public final class IoUtils {
                 }
             });
         } catch (MalformedURLException ex) {
-            IoUtils.log.log(Level.SEVERE, "Malformed URL", ex);
+            LogManager.getLogger().error("malformed URL", ex);
         }
         return null;
     }
@@ -614,7 +621,7 @@ public final class IoUtils {
                 }
             }
         } catch (IOException ioe) {
-            IoUtils.log.log(Level.WARNING, "Error probing the charset close from InputStream", ioe);
+            LogManager.getLogger().error("error probing the charset from InputStream", ioe);
         }
         detector.dataEnd();
         String charset = detector.getDetectedCharset();
@@ -762,7 +769,7 @@ public final class IoUtils {
                 try {
                     c.close();
                 } catch (Exception ex) {
-                    IoUtils.log.log(Level.WARNING, "Couldn't close Closeable", ex);
+                    LogManager.getLogger().error("couldn't close closeable", ex);
                 }
             }
         }
@@ -777,7 +784,7 @@ public final class IoUtils {
                 try {
                     c.close();
                 } catch (Exception ex) {
-                    IoUtils.log.log(Level.WARNING, "Couldn't close Closeable.", ex);
+                    LogManager.getLogger().error("couldn't close closeable.", ex);
                 }
             }
         }
@@ -785,7 +792,7 @@ public final class IoUtils {
             try {
                 socket.close();
             } catch (Exception ex) {
-                IoUtils.log.log(Level.WARNING, "Couldn't close Socket.", ex);
+                LogManager.getLogger().error("couldn't close socket.", ex);
             }
         }
     }
@@ -1075,7 +1082,7 @@ public final class IoUtils {
                     System.out.println(line);
                 }
             } catch (IOException ex) {
-                IoUtils.log.log(Level.SEVERE, "Exception consuming process outputstream", ex);
+                LogManager.getLogger().error("exception consuming process outputstream", ex);
             } finally {
                 close(bufferedStderr);
             }

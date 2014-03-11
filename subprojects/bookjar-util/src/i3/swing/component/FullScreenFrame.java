@@ -1,5 +1,6 @@
 package i3.swing.component;
 
+import i3.io.IoUtils;
 import java.awt.AWTEvent;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -20,15 +21,13 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import javax.swing.Timer;
-import i3.io.IoUtils;
 
 /**
- * A jframe with full screen functionality that can be serialized
- * the only serializable information is the fullscreen state
- * (no serialization of jcomponents)
- * This may change.
+ * A jframe with full screen functionality that can be serialized the only
+ * serializable information is the fullscreen state (no serialization of
+ * jcomponents) This may change.
  *
- *  @author i30817
+ * @author i30817
  */
 public class FullScreenFrame extends javax.swing.JFrame implements Externalizable {
 
@@ -132,10 +131,11 @@ public class FullScreenFrame extends javax.swing.JFrame implements Externalizabl
     }
 
     /**
-     * This method places the JFrame in full screen mode. This means
-     * 1) Not resizable. 2) Undecorated.
-     * Moreover it also installs a mouse listener that hides the cursor if it
-     * is not moved in more than 1.5s and shows it when moved.
+     * This method places the JFrame in full screen mode. This means 1) Not
+     * resizable. 2) Undecorated. Moreover it also installs a mouse listener
+     * that hides the cursor if it is not moved in more than 1.5s and shows it
+     * when moved.
+     *
      * @param setFull : set the fullscreen
      */
     public void setFullScreen(final boolean setFull) {
@@ -143,8 +143,8 @@ public class FullScreenFrame extends javax.swing.JFrame implements Externalizabl
             return;
         }
         final boolean wasVisible = isVisible();
-        final Component oldFocusComponent =
-                KeyboardFocusManager.getCurrentKeyboardFocusManager().
+        final Component oldFocusComponent
+                = KeyboardFocusManager.getCurrentKeyboardFocusManager().
                 getPermanentFocusOwner();
 
         setVisible(false);

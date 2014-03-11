@@ -4,7 +4,6 @@ import de.spieleck.app.cngram.NGramProfiles;
 import i3.io.FastURLEncoder;
 import i3.io.IoUtils;
 import i3.main.Book;
-import i3.main.Bookjar;
 import i3.main.Library;
 import i3.main.LibraryUpdate;
 import i3.main.LocalBook;
@@ -37,9 +36,9 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.*;
-import java.util.logging.*;
 import javax.swing.*;
 import javax.swing.text.Position.Bias;
+import org.apache.logging.log4j.LogManager;
 import org.jdesktop.swingx.JXCollapsiblePane;
 import org.jdesktop.swingx.StackLayout;
 
@@ -94,7 +93,6 @@ public final class Application implements Serializable {
 
     private void addComponents() {
         ProxySelector.setDefault(new AuthentificationProxySelector());
-        //add the inverse (show the list)
         mainPanel = new JPanel(new BorderLayout());
         mainButton = new JButton();
         gutenbergPanel = new GutenbergPanel();
@@ -120,7 +118,6 @@ public final class Application implements Serializable {
         //override the normal action name to be symbolic here (textual in shortcuts)
         undoButton.setText("[ \u25c0 ]");
         redoButton.setText("[ \u25b6 ]");
-
         //substance is stubborn (empty border will do nothing)
         percentageButton.putClientProperty("substancelaf.buttonnominsize", true);
         undoButton.putClientProperty("substancelaf.buttonnominsize", true);
@@ -263,7 +260,7 @@ public final class Application implements Serializable {
             return true;
         } catch (IOException e) {
             //do not remove books since they can be repaired
-            Bookjar.log.log(Level.SEVERE, "fatal error reading " + book, e);
+            LogManager.getLogger().error("fatal error reading " + book, e);
         }
         return false;
     }
@@ -335,13 +332,13 @@ public final class Application implements Serializable {
         }
         final int index = pane.getIndex();
         final float lastVisiblePercentage = pane.getLastVisiblePercentage();
-        assert !Float.isNaN(lastVisiblePercentage);
         bookList.withLock(new Runnable() {
             @Override
             public void run() {
                 LocalBook book = bookList.get(key);
                 if (book != null) {
-                    bookList.replace(book.setBookmark(index).setReadPercentage(lastVisiblePercentage));
+                    book = book.setBookmark(index).setReadPercentage(lastVisiblePercentage);
+                    bookList.replace(book);
                 }
             }
         });
@@ -481,7 +478,7 @@ public final class Application implements Serializable {
             try {
                 Desktop.getDesktop().open(file.toFile());
             } catch (IOException ex) {
-                Bookjar.log.log(Level.SEVERE, "exception opening folder", ex);
+                LogManager.getLogger().error("exception opening folder", ex);
             }
         }
     }
@@ -515,7 +512,7 @@ public final class Application implements Serializable {
                 Desktop.getDesktop().browse(likelyBookURI);
             }
         } catch (URISyntaxException | IOException ex) {
-            Bookjar.log.log(Level.SEVERE, "Exception browing to librarything", ex);
+            LogManager.getLogger().error("exception browing to librarything", ex);
         }
     }
     private transient Executor exe;
@@ -617,7 +614,7 @@ public final class Application implements Serializable {
                     longMsg = "(" + update.libraryRoot + ") is missing " + update.broken.size() + " out of " + update.previousBooks + " previous books, click to remove permanently";
                     category = WARNING;
                     resolve = DynamicAction.createAction(null, this, "booksMissing", update);
-                    Bookjar.log.warning("missing " + update.broken);
+                    LogManager.getLogger().warn("missing " + update.broken);
                 }
                 if (wasEmptyIsEmpty || wasFullIsEmpty || wasFullIsMissing) {
                     showNotificaton(shortMsg, longMsg, resolve, category);

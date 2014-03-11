@@ -29,7 +29,6 @@ import javax.swing.text.AbstractDocument;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultStyledDocument;
-import javax.swing.text.Document;
 import javax.swing.text.Element;
 import javax.swing.text.GapContent;
 import javax.swing.text.Highlighter;
@@ -59,22 +58,18 @@ public class MovingPane implements Serializable {
     public static final String DOCUMENT_CHANGED = "finishedReadingNewInput";
     /**
      * A key for a propertyChangeEvent fired when a inside hyperlink is clicked.
-     * Has in the oldValue, the old index of the link
-     * and in the newValue the link index.
+     * Has in the oldValue, the old index of the link and in the newValue the
+     * link index.
      */
     public static final String MOUSE_CLICK_HYPERLINK = "linked";
     /**
-     * A key for a propertyChangeEvent fired once when the mouse
-     * is over a file hyperlink.
-     * Has in the oldValue null
-     * and in the newValue null
+     * A key for a propertyChangeEvent fired once when the mouse is over a file
+     * hyperlink. Has in the oldValue null and in the newValue null
      */
     public static final String MOUSE_ENTER_HYPERLINK = "linked3";
     /**
-     * A key for a propertyChangeEvent fired once when the mouse
-     * leaves a file hyperlink.
-     * Has in the oldValue null
-     * and in the newValue null
+     * A key for a propertyChangeEvent fired once when the mouse leaves a file
+     * hyperlink. Has in the oldValue null and in the newValue null
      */
     public static final String MOUSE_EXIT_HYPERLINK = "linked4";
     /**
@@ -87,13 +82,15 @@ public class MovingPane implements Serializable {
     private transient StyledDocument buffer = null;
     /**
      * The styles that are going to delegate the changing of a part of the view
-     * Useful for removing all the italic text at once for example. Serializable.
+     * Useful for removing all the italic text at once for example.
+     * Serializable.
      */
     private transient DocumentStyle documentStyle;
     /**
      * Mutable color corresponding to a hyperlink color
      */
-    private transient WrappedColor linkColor = new WrappedColor(Color.orange);
+    private transient WrappedColor linkColor = new WrappedColor(Color.blue),
+            visitedLinkColor = new WrappedColor(Color.magenta);
     /**
      * Indicates there was a up movement before, needed because the up movement
      * can turn the index inconsistent if the component is resized afterwards.
@@ -127,6 +124,7 @@ public class MovingPane implements Serializable {
         pane.setBackground((Color) input.readObject());
         pane.setSelectionColor((Color) input.readObject());
         linkColor = (WrappedColor) input.readObject();
+        visitedLinkColor = (WrappedColor) input.readObject();
         documentStyle = (DocumentStyle) input.readObject();
     }
 
@@ -134,6 +132,7 @@ public class MovingPane implements Serializable {
         output.writeObject(pane.getBackground());
         output.writeObject(pane.getSelectionColor());
         output.writeObject(linkColor);
+        output.writeObject(visitedLinkColor);
         output.writeObject(documentStyle);
     }
 
@@ -215,26 +214,35 @@ public class MovingPane implements Serializable {
         return linkColor;
     }
 
+    public void setUsedLinkColor(Color color) {
+        if (color == null || color == visitedLinkColor || color.equals(visitedLinkColor)) {
+            return;
+        }
+        visitedLinkColor.setWrapped(color);
+        getView().repaint();
+    }
+
+    public Color getUsedLinkColor() {
+        return visitedLinkColor;
+    }
+
     private int setWordIndexPrivate(int requestedIndex, Bias bias) {
         if (buffer.getLength() == 0) {
             return 0;
         }
 
         /**
-        word beginning algorithm:
-        Assumes left-to-right language. | is index, ! is candidate location
-
-        for forward bias:
-        If ! starts in a word char will always moved left towards the start of the word.
-        If ! is in a space char it will moved right towards the start of the next word.
-        ending states:
-        put | at !
-
-        for backward bias:
-        If ! starts in a word char will always moved left towards the start of the word.
-        If ! is in a space char it will moved left towards the start of the previous word.
-        ending states:
-        put | at !
+         * word beginning algorithm: Assumes left-to-right language. | is index,
+         * ! is candidate location
+         *
+         * for forward bias: If ! starts in a word char will always moved left
+         * towards the start of the word. If ! is in a space char it will moved
+         * right towards the start of the next word. ending states: put | at !
+         *
+         * for backward bias: If ! starts in a word char will always moved left
+         * towards the start of the word. If ! is in a space char it will moved
+         * left towards the start of the previous word. ending states: put | at
+         * !
          */
         int oldIndex = getIndex();
         int newIndex;
@@ -265,7 +273,7 @@ public class MovingPane implements Serializable {
         }
     }
 
-    public AttributeSet getCharacterAttributesAt(Point point) {
+    private AttributeSet getCharacterAttributesAt(Point point) {
         int pos = pane.viewToModel(point);
         if (pos < 0) {
             return SimpleAttributeSet.EMPTY;
@@ -284,12 +292,11 @@ public class MovingPane implements Serializable {
      *
      * @param doc
      *
-     *            The document to apply the text
-     * @param start
-     *            The index where to end the text taken from the document buffer
-     * @param length
-     *            The lenght of styled text to copy from the document buffer to
-     *            the doc
+     * The document to apply the text
+     * @param start The index where to end the text taken from the document
+     * buffer
+     * @param length The lenght of styled text to copy from the document buffer
+     * to the doc
      */
     private void backwardConstructDocument(StyledDocument doc, int start, int length) {
         int var = Math.max(start - length, 0);
@@ -306,8 +313,7 @@ public class MovingPane implements Serializable {
      */
     public void moveBackward() {
         /**
-         * We do not move if there is nothing to move
-         * or the clean index is zero
+         * We do not move if there is nothing to move or the clean index is zero
          */
         ObservedResult result = ((MovingEditorKit) pane.getEditorKit()).getObserver().getResult();
         //&& getIndex(result) != buffer.getLength() bug fix for setting the pane to the last  character
@@ -317,7 +323,8 @@ public class MovingPane implements Serializable {
         }
 
         /**
-         * If the component is dirty, we need to update the index before we move. MoveBackward dirties the index.
+         * If the component is dirty, we need to update the index before we
+         * move. MoveBackward dirties the index.
          */
         cleanIndex(result);
         StyledDocument doc = new DefaultStyledDocument(new GapContent(getDisplayableText() + 16), StyleContext.getDefaultStyleContext());
@@ -346,8 +353,9 @@ public class MovingPane implements Serializable {
     /**
      * Cleans the index when called. Only call this when you know you are going
      * to move the index afterwards
-     * @param result the index is cleaned using the reported interval given
-     * by this ObservedResult
+     *
+     * @param result the index is cleaned using the reported interval given by
+     * this ObservedResult
      */
     private void cleanIndex(ObservedResult result) {
         index = getIndex(result);
@@ -359,14 +367,11 @@ public class MovingPane implements Serializable {
      * and apply them to the container
      *
      *
-     * @param doc
-     *            The document to apply the text
-     * @param start
-     *            The index where to start to get the text in the document
-     *            buffer
-     * @param length
-     *            The length of styled text to copy from the document
-     *            buffer to the doc (truncated if not possible)
+     * @param doc The document to apply the text
+     * @param start The index where to start to get the text in the document
+     * buffer
+     * @param length The length of styled text to copy from the document buffer
+     * to the doc (truncated if not possible)
      */
     private void forwardConstructDocument(StyledDocument doc, final int start, final int length) {
 
@@ -411,10 +416,10 @@ public class MovingPane implements Serializable {
     public void moveForward() {
 
         /**
-         * We do not move if there is nothing to move
-         * or the clean index + interval equals the end of the document.
-         * All abstract documents have an addicional character applied
-         * at the end but our observer takes care of that.
+         * We do not move if there is nothing to move or the clean index +
+         * interval equals the end of the document. All abstract documents have
+         * an addicional character applied at the end but our observer takes
+         * care of that.
          */
         ObservedResult result = ((MovingEditorKit) pane.getEditorKit()).getObserver().getResult();
 
@@ -433,6 +438,7 @@ public class MovingPane implements Serializable {
     /**
      * Before and during the DOCUMENT_CHANGING event the URL stays the same
      * until the DOCUMENT_CHANGED event where the URL is changed.
+     *
      * @return the URL of the current parse stream
      */
     public URL getURL() {
@@ -474,15 +480,13 @@ public class MovingPane implements Serializable {
     /**
      * Parses a file and sets it in the view.
      *
-     * The document configured according to the properties.
-     * Sends a PropertyChangeEvent that signals that the the current
-     * document finished changing from old to new, if it changed.
+     * The document configured according to the properties. Sends a
+     * PropertyChangeEvent that signals that the the current document finished
+     * changing from old to new, if it changed.
      *
-     * @param url
-     *            the URL to be parsed (html, htm or rtf, or parse as text otherwise)
-     *            if null pr unreachable the method does nothing.
-     * @param index
-     *            the position where to start displaying the document.
+     * @param url the URL to be parsed (html, htm or rtf, or parse as text
+     * otherwise) if null pr unreachable the method does nothing.
+     * @param index the position where to start displaying the document.
      * @param props for the parsers
      */
     public void read(URL url, int index, Map<Property, Object> props) throws IOException {
@@ -496,6 +500,7 @@ public class MovingPane implements Serializable {
             return;
         }
         props.put(Property.HYPERLINK_COLOR, linkColor);
+        props.put(Property.VISITED_HYPERLINK_COLOR, visitedLinkColor);
         //this removes the possibility to undo on failure...
         //but allows larger files without oom exceptions.
         //It's why i'm testing existence with IoUtils.canRead
@@ -506,9 +511,8 @@ public class MovingPane implements Serializable {
     }
 
     /**
-     * Parses the given reader in format format,
-     * and sets it in the view.
-     * The reader will be configurated according to the properties
+     * Parses the given reader in format format, and sets it in the view. The
+     * reader will be configurated according to the properties
      *
      * @param stream the Reader to be parsed
      * @param format the format of the reader
@@ -517,14 +521,14 @@ public class MovingPane implements Serializable {
     public void read(final InputStream stream, final String format, int index, Map<Property, Object> props) throws IOException {
         buffer = null;
         props.put(Property.HYPERLINK_COLOR, linkColor);
+        props.put(Property.VISITED_HYPERLINK_COLOR, visitedLinkColor);
         BookLoader loader = BookLoader.forFileName(format);
         StyledDocument doc = doStylesChange(loader.create(stream, props));
         installDocument(doc, index, null);
     }
 
     /**
-     * Parses the given string in format format,
-     * and sets it in the view.
+     * Parses the given string in format format, and sets it in the view.
      *
      * The reader will be configurated according to the properties
      *
@@ -535,6 +539,7 @@ public class MovingPane implements Serializable {
     public void read(String string, String mimeType, int index, Map<Property, Object> props) {
         buffer = null;
         props.put(Property.HYPERLINK_COLOR, linkColor);
+        props.put(Property.VISITED_HYPERLINK_COLOR, visitedLinkColor);
         BookLoader loader = BookLoader.forMimeType(mimeType);
         StyledDocument doc = doStylesChange(loader.create(string, props));
         installDocument(doc, index, null);
@@ -548,6 +553,7 @@ public class MovingPane implements Serializable {
 
     /**
      * Sets the document with a order of layout
+     *
      * @param doc the document to display
      * @param layoutForward layout the views forward
      */
@@ -559,12 +565,11 @@ public class MovingPane implements Serializable {
     }
 
     /**
-     * Sets the position of the buffer.
-     * If the buffer is null pr the same
-     * as the current one, does nothing.
-     * @param i
-     *            The position that the text should start to display, truncated
-     *            to a legal value if < 0 or > buffer.getLength()
+     * Sets the position of the buffer. If the buffer is null pr the same as the
+     * current one, does nothing.
+     *
+     * @param i The position that the text should start to display, truncated to
+     * a legal value if < 0 or > buffer.getLength()
      */
     public void setIndex(int i) {
         if (buffer != null) {
@@ -577,16 +582,15 @@ public class MovingPane implements Serializable {
     }
 
     /**
-     * Sets a position of the buffer, but moves
-     * the position so it displays the whole word
-     * at the position set.
+     * Sets a position of the buffer, but moves the position so it displays the
+     * whole word at the position set.
+     *
      * @param i the position truncated to a legal value
-     * @param bias the bias to choose which word to set on.
-     * Bias.Forward - next word, unless current word is truncated,
-     * where it displays the current one
+     * @param bias the bias to choose which word to set on. Bias.Forward - next
+     * word, unless current word is truncated, where it displays the current one
      * Bias.Backward - previous word (if truncated, the current word)
-     * @return the actual position set, -1 if buffer is null
-     * if i == index, then no actual moving is done
+     * @return the actual position set, -1 if buffer is null if i == index, then
+     * no actual moving is done
      */
     public int setWordIndex(int i, Bias bias) {
         if (buffer != null) {
@@ -597,8 +601,8 @@ public class MovingPane implements Serializable {
     }
 
     /**
-     * Used to return a consistent index, at the exact moment the
-     * given result was calculated. Only used internally for efficiency.
+     * Used to return a consistent index, at the exact moment the given result
+     * was calculated. Only used internally for efficiency.
      *
      * @param result the current result
      * @return the calculated index in the buffer
@@ -626,11 +630,10 @@ public class MovingPane implements Serializable {
     }
 
     /**
-     * Used to return a consistent index, at this exact moment,
-     * for the next invisible char (after the visible text), if any.
+     * Used to return a consistent index, at this exact moment, for the next
+     * invisible char (after the visible text), if any.
      *
-     * @return the getIndex() for the pane after a user
-     * calls moveForward().
+     * @return the getIndex() for the pane after a user calls moveForward().
      */
     public int getLastVisibleIndex() {
         if (isDirty) {
@@ -642,9 +645,8 @@ public class MovingPane implements Serializable {
     }
 
     /**
-     * @return A estimative of an length of text that is
-     * more than the legth of text displayable in the maximum
-     * size of the movingPane
+     * @return A estimative of an length of text that is more than the legth of
+     * text displayable in the maximum size of the movingPane
      */
     private int getDisplayableText() {
         return Math.min(buffer.getLength(), estimateDisplayableText());
@@ -662,9 +664,9 @@ public class MovingPane implements Serializable {
 
     /**
      * Gets where we are on the text in a percentage
-     * @return a float bettween 0 and 1 that is the percentage
-     * from the start of the text.
-     * If not possible to to get the percentage, return NaN
+     *
+     * @return a float between 0 and 1 that is the percentage from the start of
+     * the text. If not possible to to get the percentage, return NaN
      */
     public float getPercentage() {
 
@@ -676,9 +678,10 @@ public class MovingPane implements Serializable {
 
     /**
      * Gets where we are on the text in a percentage
-     * @return a float bettween 0 and 1 that is the percentage
-     * from the start of the text to the end of the visible text.
-     * If not possible to to get the percentage, return NaN
+     *
+     * @return a float between 0 and 1 that is the percentage from the start of
+     * the text to the end of the visible text. If not possible to to get the
+     * percentage, return NaN
      */
     public float getLastVisiblePercentage() {
 
@@ -705,7 +708,6 @@ public class MovingPane implements Serializable {
     }
 
     public JComponent getView() {
-        //can debug painting by adding JXLayer, commenthing the next and uncommenting the next after that
         return pane;
         //return new org.jdesktop.jxlayer.JXLayer(pane, new org.jdesktop.jxlayer.plaf.ext.DebugRepaintingUI());
     }
@@ -720,11 +722,11 @@ public class MovingPane implements Serializable {
 
     /**
      * Gets text from between the indexes
+     *
      * @param index
      * @param endIndex
      * @return text
-     * @throws IllegalArgumentException
-     * if the location is not valid.
+     * @throws IllegalArgumentException if the location is not valid.
      */
     public String getText(int index, int endIndex) {
         try {
@@ -736,6 +738,7 @@ public class MovingPane implements Serializable {
 
     /**
      * Gets the visible text now.
+     *
      * @return text
      */
     public String getVisibleText() {
@@ -744,10 +747,10 @@ public class MovingPane implements Serializable {
 
     /**
      * Text from a paragraph.
+     *
      * @param index
      * @return text
-     * @throws IllegalArgumentException
-     * if the paragraph does not exist.
+     * @throws IllegalArgumentException if the paragraph does not exist.
      */
     public String getParagraphAt(int index) {
         Element root = buffer.getRootElements()[0];
@@ -764,10 +767,10 @@ public class MovingPane implements Serializable {
 
     /**
      * Text from a paragraph, truncated to start at index.
+     *
      * @param index
      * @return text
-     * @throws IllegalArgumentException
-     * if the paragraph does not exist.
+     * @throws IllegalArgumentException if the paragraph does not exist.
      */
     private String getTruncatedParagraphAt(int index) {
         Element root = buffer.getRootElements()[0];
@@ -782,12 +785,12 @@ public class MovingPane implements Serializable {
     }
 
     /**
-     * Returns the current text paragraphs so that
-     * the current paragraph is kept in view. Moves the
-     * pane automatically.
-     * @param initialParagraphIndex a index belonging to
-     * the initial paragraph. The returned string will be
-     * cut to only show the visible part of the paragraph.
+     * Returns the current text paragraphs so that the current paragraph is kept
+     * in view. Moves the pane automatically.
+     *
+     * @param initialParagraphIndex a index belonging to the initial paragraph.
+     * The returned string will be cut to only show the visible part of the
+     * paragraph.
      */
     public Iterator<String> getParagraphIterator(int initialParagraphIndex) {
         return new ParagraphIterator(initialParagraphIndex);
@@ -814,6 +817,7 @@ public class MovingPane implements Serializable {
 
     /**
      * Remove a highlighter
+     *
      * @param key if null does nothing
      */
     public void removeHighlight(final Object key) {
@@ -827,8 +831,9 @@ public class MovingPane implements Serializable {
     private transient Highlighter.HighlightPainter painter;
 
     /**
-     * Highlight a visible part of the text. If the indexes
-     * given are not visible, this doesn't add a highlighter.
+     * Highlight a visible part of the text. If the indexes given are not
+     * visible, this doesn't add a highlighter.
+     *
      * @param highlightStart
      * @param highlightEnd
      * @return a highlight key
@@ -902,6 +907,10 @@ public class MovingPane implements Serializable {
 
     /**
      * Forward linkevents when the links are clicked.
+     *
+     *
+     * TODO: forbid clicking links that are on 'invisible' paragraphs due to the
+     * view factory
      */
     private final class LinkController extends MouseAdapter {
 
@@ -910,21 +919,31 @@ public class MovingPane implements Serializable {
 
         @Override
         public void mouseClicked(MouseEvent evt) {
-            point.x = evt.getX();
-            point.y = evt.getY();
-            AttributeSet set = getCharacterAttributesAt(point);
-            Document d = pane.getDocument();
-
             if (!isLeftMouseButton(evt)) {
                 return;
             }
+            point.x = evt.getX();
+            point.y = evt.getY();
+            AttributeSet set = getCharacterAttributesAt(point);
+
             if (set.isDefined(HREF)) {//a indexed position
                 Object key = set.getAttribute(HREF);
 
-                if (key == null || d.getProperty(key) == null) {
+                Integer destination;
+                if (key == null || (destination = (Integer) buffer.getProperty(key)) == null) {
                     return;
                 }
-                Integer destination = (Integer) d.getProperty(key);
+                //need to change the element on the buffer
+                //using view to model here is dangerous, since the view can be
+                //anchored forward or backwards.
+                int indexInBuffer = isDirty
+                        ? index - (pane.getDocument().getLength() - pane.viewToModel(point))
+                        : index + pane.viewToModel(point);
+                Element elem = buffer.getCharacterElement(indexInBuffer);
+                SimpleAttributeSet newSet = new SimpleAttributeSet(set);
+                newSet.addAttribute(StyleConstants.Foreground, visitedLinkColor);
+                buffer.setCharacterAttributes(elem.getStartOffset(), elem.getEndOffset() - elem.getStartOffset(), newSet, false);
+                //Nothing else TBD: to react to the click, a client will have to set position, and that will reset the view styles.
                 support.firePropertyChange(MOUSE_CLICK_HYPERLINK, getIndex(), destination.intValue());
             }
         }

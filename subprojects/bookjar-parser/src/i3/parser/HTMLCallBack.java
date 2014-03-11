@@ -22,16 +22,14 @@ import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
 
 /**
- * Parses html to get the text and images
- * saves the a list of the current names of <a name="names"></a>
- * on the attribute HTML.Attribute.NAME for the revelant attributesets
- * The locations for inside links are inside the document properties.
+ * Parses html to get the text Saves a list of the current anchor names on the
+ * attribute HTML.Attribute.NAME The locations for inside links are inside the
+ * document properties.
  *
- * So if you want to a link - access the clicked attributeset,
- * get the name element of the list (the one you want):
- * Object key = att.getAttribute(HTML.Attribute.HREF);
- * Then get the correct index :
- * Integer i = (Integer) doc.getProperty(key);
+ * So if you want to a link - access the clicked attributeset, get the name
+ * element of the list (the one you want): Object key =
+ * att.getAttribute(HTML.Attribute.HREF); Then get the correct index : Integer i
+ * = (Integer) doc.getProperty(key);
  *
  * @author i30817
  *
@@ -47,6 +45,7 @@ public class HTMLCallBack implements ContentHandler {
 
     /**
      * Link color can be mutable by subclassing Color.
+     *
      * @param document to fill
      * @param linkColor a color for the links.
      */
@@ -164,7 +163,8 @@ public class HTMLCallBack implements ContentHandler {
                 try {
                     /*Try as a number*/
                     return Color.decode(code);
-                } catch (NumberFormatException f) { /*Give up*/
+                } catch (NumberFormatException f) {
+                    /*Give up*/
                     return null;
                 }
             }
@@ -224,15 +224,15 @@ public class HTMLCallBack implements ContentHandler {
         //Only erase <a> attributes if we encountered real text.
         //This means that we can't start and end a link on whitespace.
         if (linkVisited) {
-            boolean needsCleanup = false;
+            boolean stopLinking = false;
 
             for (int i = ch.length - 1; i >= index; i--) {
                 if (ch[i] != ' ') {
-                    needsCleanup = true;
+                    stopLinking = true;
                     break;
                 }
             }
-            if (needsCleanup) {
+            if (stopLinking) {
                 memory.removeAttribute(StyleConstants.Underline);
                 memory.removeAttribute(Attribute.HREF);
                 memory.removeAttribute(StyleConstants.Foreground);

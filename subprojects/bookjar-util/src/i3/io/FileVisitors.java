@@ -7,7 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
+import org.apache.logging.log4j.LogManager;
 
 public class FileVisitors {
 
@@ -56,7 +56,7 @@ public class FileVisitors {
 
         @Override
         public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-            IoUtils.log.log(Level.WARNING, "visitFileFailed: {0}", exc.toString());
+            LogManager.getLogger().warn("visitFileFailed: " + exc.getMessage());
             return FileVisitResult.CONTINUE;
         }
 
@@ -93,7 +93,7 @@ public class FileVisitors {
 
         @Override
         public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-            IoUtils.log.log(Level.WARNING, "visitFileFailed: {0}", exc.toString());
+            LogManager.getLogger().warn("visitFileFailed: " + exc.getMessage());
             return FileVisitResult.CONTINUE;
         }
 

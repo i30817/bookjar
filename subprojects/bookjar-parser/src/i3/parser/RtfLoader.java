@@ -15,6 +15,7 @@ import javax.swing.text.DefaultStyledDocument;
 import javax.swing.text.EditorKit;
 import javax.swing.text.StyledDocument;
 import javax.swing.text.rtf.RTFEditorKit;
+import org.apache.logging.log4j.LogManager;
 
 public final class RtfLoader extends BookLoader {
 
@@ -64,7 +65,6 @@ public final class RtfLoader extends BookLoader {
             addUnimplementedTagByReflection();
         }
 
-
         DefaultStyledDocument toParse = new ParserDocument();
 
         ParserListener l = (ParserListener) properties.get(Property.PARSER_LISTENER);
@@ -93,7 +93,7 @@ public final class RtfLoader extends BookLoader {
             Dictionary<String, String> table = (Dictionary<String, String>) field.get(null);
             table.put("line", "\n");
         } catch (Exception e) {
-            BookLoader.log.warning("Couldn't reflect field to fix rtf \\line bug");
+            LogManager.getLogger().warn("couldn't reflect field to fix missing rtf tag '\\line' bug");
         }
     }
 }

@@ -1,11 +1,11 @@
 package i3.ui.data;
 
-import java.awt.image.RenderedImage;
+import i3.io.IoUtils;
+import i3.main.Bookjar;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
 import javax.imageio.ImageIO;
-import i3.main.Bookjar;
-import i3.io.IoUtils;
 
 /**
  *
@@ -43,16 +43,21 @@ public final class WriteImageToCache {
         key = name;
     }
 
-    public void write(RenderedImage arg) throws Exception {
+    public void write(BufferedImage arg) throws Exception {
         if (turnedOff) {
             return;
         }
-
-        Path cached = IoUtils.getSafeFileSystemFile(imagesDir, key + "." + bestFormat);
+        boolean hasAlpha = arg.getColorModel().hasAlpha();
+        String format = bestFormat;
+        //was originally png or similar, save it as png, since jpg doesn't support transparency
+        if (hasAlpha && format.equals("jpg")) {
+            format = "png";
+        }
+        Path cached = IoUtils.getSafeFileSystemFile(imagesDir, key + "." + format);
         try {
-            ImageIO.write(arg, bestFormat, cached.toFile());
+            ImageIO.write(arg, format, cached.toFile());
         } catch (IOException t) {
-            throw new IllegalArgumentException("Trying to write image from file \"" + key + "\" failed, cause: " + t.getMessage());
+            throw new IllegalArgumentException("failed to write image of type(" + arg.getType() + ") to file \"" + cached + "\"", t);
         }
     }
 }

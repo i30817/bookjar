@@ -14,6 +14,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -48,8 +49,9 @@ public final class LocalBook implements Book, Serializable {
     private final String language;
     //should be final but it's assigned by readObj (for writeObj performance)
     private transient Path file;
-    private transient Map<Property, Object> metadata;//lazy init
-    private final transient boolean broken;//reconstructed  on library startup
+    private transient Map<Property, Object> metadata;//lazy init, not thread-safe
+    //reconstructed  on library startup, or when trying to read detects a exception
+    private final transient boolean broken;
 
     private void readObject(ObjectInputStream input) throws IOException, ClassNotFoundException {
         input.defaultReadObject();
@@ -86,6 +88,16 @@ public final class LocalBook implements Book, Serializable {
         this.broken = broken;
     }
 
+    private LocalBook(Path file, String language, int index, float percentageRead, boolean gutenbergFile, boolean broken, Map<Property, Object> metadata) {
+        this.language = language;
+        this.file = file;
+        this.index = index;
+        this.percentageRead = percentageRead;
+        this.gutenbergFile = gutenbergFile;
+        this.broken = broken;
+        this.metadata = metadata;
+    }
+
     @Override
     public String toString() {
         return file.getFileName().toString();
@@ -120,23 +132,24 @@ public final class LocalBook implements Book, Serializable {
     }
 
     public LocalBook setRelativeFile(Path f) {
-        return new LocalBook(f, language, index, percentageRead, gutenbergFile, broken);
+        return new LocalBook(f, language, index, percentageRead, gutenbergFile, broken, metadata);
     }
 
     public LocalBook setLanguage(String language) {
-        return new LocalBook(file, language, index, percentageRead, gutenbergFile, broken);
+        return new LocalBook(file, language, index, percentageRead, gutenbergFile, broken, metadata);
     }
 
     public LocalBook setBookmark(int readIndex) {
-        return new LocalBook(file, language, readIndex, percentageRead, gutenbergFile, broken);
+        return new LocalBook(file, language, readIndex, percentageRead, gutenbergFile, broken, metadata);
     }
 
     public LocalBook setReadPercentage(float readPercentage) {
-        return new LocalBook(file, language, index, readPercentage, gutenbergFile, broken);
+        assert !Float.isNaN(readPercentage) && !Float.isInfinite(readPercentage) && readPercentage >= 0D;
+        return new LocalBook(file, language, index, readPercentage, gutenbergFile, broken, metadata);
     }
 
     public LocalBook setBroken(boolean b) {
-        return new LocalBook(file, language, index, percentageRead, gutenbergFile, b);
+        return new LocalBook(file, language, index, percentageRead, gutenbergFile, b, metadata);
     }
 
     /**
@@ -164,7 +177,7 @@ public final class LocalBook implements Book, Serializable {
             }
             //other properties put elsewhere
         }
-        return metadata;
+        return Collections.synchronizedMap(metadata);
     }
 
     @Override

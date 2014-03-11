@@ -1,5 +1,6 @@
 package i3.download;
 
+import i3.io.StatisticsInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -8,8 +9,6 @@ import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Observable;
-import java.util.logging.Logger;
-import i3.io.StatisticsInputStream;
 
 public final class Download extends Observable {
 
@@ -17,7 +16,6 @@ public final class Download extends Observable {
     private volatile State currentState;
     private final Path localFile;
     private final URL url;
-    public static final Logger log = Logger.getAnonymousLogger();
 
     /**
      * Create a download

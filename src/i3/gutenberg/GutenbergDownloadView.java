@@ -2,6 +2,12 @@ package i3.gutenberg;
 
 import i3.download.DownloadState;
 import i3.download.DownloadView;
+import i3.io.IoUtils;
+import i3.main.GutenbergBook;
+import i3.main.Library;
+import i3.main.LocalBook;
+import i3.swing.icon.OverlayIcon;
+import i3.ui.Application;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Font;
@@ -9,20 +15,13 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-import java.nio.file.Path;
-import javax.swing.Icon;
-import javax.swing.ImageIcon;
-import i3.main.GutenbergBook;
-import i3.ui.Application;
-import i3.io.IoUtils;
-import i3.main.Bookjar;
-import i3.main.Library;
-import i3.main.LocalBook;
-import i3.swing.icon.OverlayIcon;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.logging.Level;
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
+import org.apache.logging.log4j.LogManager;
 
 /**
  * A view Provider for gutenberg text downloads
@@ -116,7 +115,7 @@ public class GutenbergDownloadView extends DownloadView<GutenbergBook> {
         if (state.isCancelled()) {
             Exception e = state.getError();
             if (e != null) {
-                Bookjar.log.log(Level.SEVERE, "download was cancelled due to error ", e);
+                LogManager.getLogger().error("download was cancelled due to error ", e);
             }
             return cancelled;
         }
@@ -153,7 +152,7 @@ public class GutenbergDownloadView extends DownloadView<GutenbergBook> {
                 Application.app.toggleGutenbergList();
                 Application.app.read(book);
             } catch (IOException ex) {
-                Bookjar.log.log(Level.SEVERE, "could not move file to library directory", ex);
+                LogManager.getLogger().error("could not move file to library directory", ex);
             }
         }
     }

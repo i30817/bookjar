@@ -11,8 +11,9 @@ import javax.imageio.ImageIO;
 import i3.io.IoUtils;
 
 /**
- * Read 1 image from a compressed archive,
- * using various heuristics to choose the image
+ * Read 1 image from a compressed archive, using various heuristics to choose
+ * the image
+ *
  * @author Owner
  */
 public final class ReadImageFromArchive {

@@ -1,7 +1,7 @@
 package i3.dragndrop;
 
 import java.awt.dnd.DropTargetDropEvent;
-import i3.io.IoUtils;
+import org.apache.logging.log4j.LogManager;
 
 /**
  *
@@ -17,7 +17,7 @@ public final class NullStrategy implements DropStrategy {
 
     @Override
     public void drop(DropTargetDropEvent drop) throws Exception {
-        IoUtils.log.severe("failed to create a dropstrategy for the dataflavor " + flavor);
+        LogManager.getLogger().error("failed to create a dropstrategy for the dataflavor " + flavor);
         drop.rejectDrop();
     }
 }

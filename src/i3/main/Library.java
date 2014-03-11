@@ -33,8 +33,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.logging.Level;
 import javax.swing.event.SwingPropertyChangeSupport;
+import org.apache.logging.log4j.LogManager;
 
 /**
  * The library collects the book metadata. It identifies books by their
@@ -46,12 +46,13 @@ import javax.swing.event.SwingPropertyChangeSupport;
  * the library. This can be used by clients to implement repair strategies such
  * as asking for a new library root dir or deleting metadata completely. It also
  * installs a file-system watcher on the library dir that breaks files if
- * deleted or adds new ones if added. Deletion of the lib dir will trigger a
- * notification.
+ * deleted or adds new ones if added. Deletion/move of the lib dir will trigger
+ * a notification.
  *
- * methods who return Paths, return them absolute methods who take URLs or Paths
- * as arguments, relativize them to the library root first. Therefore, it is a
- * invariant of this class that the library root must be set to add books to it.
+ * methods who return Paths, return them absolute; methods who take URLs or
+ * Paths as arguments, relativize them to the library root first. Therefore, it
+ * is a invariant of this class that the library root must be set to add books
+ * to it.
  *
  * This class is only externalizable to be able to be used on serializable
  * classes without transient, which complicates deserialization, it uses its own
@@ -106,7 +107,7 @@ public final class Library implements Externalizable {
                             eventList.remove(b);
                             eventList.add(0, b);
                         } catch (IOException ex) {
-                            Bookjar.log.warning("Localbook file corrupt");
+                            LogManager.getLogger().warn("file corrupt " + ex.getMessage());
                         }
                     }
                 } finally {
@@ -129,7 +130,7 @@ public final class Library implements Externalizable {
     public void validateLibrary() {
         Path root = libraryRoot;
         if (root == null || !Files.isDirectory(root)) {
-            Bookjar.log.severe("Invalid library (" + root + ") requires reseting");
+            LogManager.getLogger().error("invalid library (" + root + ") requires reseting");
             sendUpdate(LibraryUpdate.createBrokenLibraryEvent(this));
             libraryRoot = null;
         } else {
@@ -147,7 +148,7 @@ public final class Library implements Externalizable {
         try {
             ObjectsReader.writeObjects(libraryState, saved, eventList);
         } catch (IOException ex) {
-            Bookjar.log.log(Level.SEVERE, "during saving", ex);
+            LogManager.getLogger().error("during saving", ex);
         } finally {
             eventList.getReadWriteLock().readLock().unlock();
         }
@@ -161,7 +162,7 @@ public final class Library implements Externalizable {
             Path p = partialLibraryDir.resolve(lb.getFileName() + ".b");
             ObjectsReader.writeObjects(p, lb);
         } catch (IOException ex) {
-            Bookjar.log.log(Level.SEVERE, "during saving", ex);
+            LogManager.getLogger().error("during saving", ex);
         }
     }
 
@@ -232,7 +233,7 @@ public final class Library implements Externalizable {
             if (it != null) {
                 LocalBook old = it.previous();
                 it.set(old.setBroken(true));
-                Bookjar.log.log(Level.WARNING, "{0} was broken", old.getFileName());
+                LogManager.getLogger().warn("broke " + old.getFileName());
                 return true;
             }
         } finally {
@@ -328,7 +329,7 @@ public final class Library implements Externalizable {
                 bookmark = it.previous();
                 if (bookmark.isBroken() && Files.exists(key)) {
                     bookmark = bookmark.setRelativeFile(fileKey).setBroken(false);
-                    Bookjar.log.log(Level.INFO, "{0} was repaired", bookmark.getFileName());
+                    LogManager.getLogger().info("repaired " + bookmark.getFileName());
                 }
             }
         } finally {
@@ -402,15 +403,15 @@ public final class Library implements Externalizable {
         }
 
         if (repairedNumber > 0 && repairedNumber == listSize) {
-            Bookjar.log.info("library repaired");
+            LogManager.getLogger().info("library repaired");
         } else if (repairedNumber > 0) {
-            Bookjar.log.log(Level.INFO, "repaired {0} library books, {1} remain broken", new Object[]{repairedNumber, listSize - repairedNumber});
+            LogManager.getLogger().info("repaired {0} library books, {1} remain broken", repairedNumber, listSize - repairedNumber);
         }
 
         if (fileBooks.isEmpty()) {
             return LibraryUpdate.createEvent(libraryRoot, listSize, 0, repairedNumber, broken);
         }
-        //this is done here and not before because it's likely that the cicle
+        //this is done here and not before because it's likely that the cycle
         //above cut on a lot of books
         TreeSet<LocalBook> sortedBooks = new TreeSet<>(
                 new Comparator<LocalBook>() {
@@ -491,13 +492,13 @@ public final class Library implements Externalizable {
     }
 
     /**
-     * Sends a property change with available as the 'new' value.
+     * Sends a property change with the library state.
      *
-     * All books managed by a library will be 'broken' if this is set false, but
-     * when it is set true, they will recover, if not set to broken meanwhile.
+     * If the available field of the update is set to false, the library will
+     * not be available until updateLibrary is called with a valid directory.
      */
     static void sendUpdate(LibraryUpdate update) {
-        rootAvailable = update.available;//for external callers
+        rootAvailable = update.available;
         pipe.firePropertyChange(LIBRARY_CHANGE, null, update);
     }
 

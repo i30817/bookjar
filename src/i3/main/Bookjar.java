@@ -1,32 +1,40 @@
 package i3.main;
 
+import i3.io.IoUtils;
+import i3.io.ObjectsReader;
+import i3.ui.Application;
 import java.awt.EventQueue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.logging.FileHandler;
-import java.util.logging.Handler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
-import i3.ui.Application;
-import i3.io.IoUtils;
-import i3.io.ObjectsReader;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 
 /**
  * The class that starts it all, and has a few hacks too.
  */
 public class Bookjar implements Runnable {
 
-    public static final Path programLocation = getProgramLocation();
-    private static final Path programStateLocation = programLocation.resolve("bookjarstate.bin");
-    public static Logger log = Logger.getAnonymousLogger();
-    public static Handler handle;
+    public static Path programLocation;
+    private final Path programStateLocation;
+
+    public Bookjar() {
+        //First shutdown hook of the app to be added after the system/native ones
+        Runtime.getRuntime().addShutdownHook(new Thread(new SaveRunnable()));
+        programLocation = getProgramLocation();
+        programStateLocation = programLocation.resolve("bookjarstate.bin");
+        //can only start to write to file after having the program location
+        System.setProperty("bookjar.log", programLocation.resolve("bookjar.log").toString());
+        LogManager.getLogger().info("program directory is " + programLocation);
+        EventQueue.invokeLater(this);
+    }
 
     private static Path getProgramLocation() {
+        //don't log while not inited
         Path programDir = IoUtils.getApplicationDirectory(Bookjar.class);
         Path otherDir = programDir.resolve("bookjar");
         try {
@@ -34,20 +42,15 @@ public class Bookjar implements Runnable {
                 return otherDir;
             }
         } catch (SecurityException ex) {
-            log.log(Level.INFO, "Access denied while checking for a mobile write dir");
         }
         Path stateDir = Paths.get(System.getProperty("user.home"), ".config/bookjar");
-        if (IoUtils.validateOrCreateDir(stateDir, "Can't get home write dir; trying to create in mobile write dir...")) {
+        if (IoUtils.validateOrCreateDir(stateDir)) {
             return stateDir;
         }
-        if (IoUtils.validateOrCreateDir(otherDir, "Can't create mobile write dir - using tmp dir.")) {
+        if (IoUtils.validateOrCreateDir(otherDir)) {
             return otherDir;
         }
         return Paths.get(System.getProperty("java.io.tmpdir"));
-    }
-
-    public static void main(final String[] args) throws IOException {
-        EventQueue.invokeLater(new Bookjar());
     }
 
     public void run() {
@@ -57,7 +60,7 @@ public class Bookjar implements Runnable {
             String savedLookAndFeel = it.readOrReturn(UIManager.getSystemLookAndFeelClassName());
             setLookAndFeel(savedLookAndFeel);
             app = it.readOrLazyCreate(Application.class);
-        } catch (IOException e) {//shouldn't happen
+        } catch (IOException e) {
             throw new AssertionError(e);
         }
 
@@ -72,24 +75,10 @@ public class Bookjar implements Runnable {
         }
     }
 
-    private static void setProperties() {
-        //there is a bug in linux where x is stopped and the file is not written
-        //i'm still unsure of the cause
-        IoUtils.addShutdownHook(new SaveRunnable());
-
-        try {
-            handle = new FileHandler(programLocation.resolve("log.txt").toFile().toString(), 1024 * 1024, 2, false);
-            handle.setFormatter(new SimpleFormatter());
-            handle.setLevel(Level.INFO);
-            log.addHandler(handle);
-        } catch (IOException | SecurityException ex) {
-            log.warning("Could not set the log to go to file");
-        }
-
+    private void setProperties() {
         //javax.swing.RepaintManager.setCurrentManager(new org.jdesktop.swinghelper.debug.CheckThreadViolationRepaintManager(true));
         //org.jdesktop.swinghelper.debug.EventDispatchThreadHangMonitor.initMonitoring();
         //System.setProperty("sun.java2d.noddraw", "true");
-        System.setProperty("http.agent", "Opera/7.10 (UNIX; U) [en]");
         System.setProperty("swing.boldMetal", "true");
         System.setProperty("swing.aatext", "true");
         System.setProperty("awt.useSystemAAFontSettings", "on");
@@ -103,7 +92,7 @@ public class Bookjar implements Runnable {
             try {
                 new ProcessBuilder("regsvr32", "/u", "/s", System.getenv("windir") + "\\system32\\zipfldr.dll").start();
             } catch (Exception ex) {
-                log.log(Level.SEVERE, "Could not disable windows zip file handling", ex);
+                LogManager.getLogger().warn("could not disable windows zip file handling", ex);
             }
         }
     }
@@ -112,26 +101,25 @@ public class Bookjar implements Runnable {
         try {
             UIManager.setLookAndFeel(lafName);
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException ex) {
-            log.log(Level.SEVERE, "Could not set look and feel", ex);
+            LogManager.getLogger().error("could not set look and feel", ex);
         }
     }
 
-    private static class SaveRunnable implements Runnable {
+    private class SaveRunnable implements Runnable {
 
         @Override
         public void run() {
-            log.info("Started serialization");
-            handle.flush();
+            Logger shutdownLogger = LogManager.getLogger("syslogger");
+            shutdownLogger.info("started serialization");
             try {
                 String lafName = UIManager.getLookAndFeel().getClass().getCanonicalName();
                 ObjectsReader.writeObjects(programStateLocation, lafName, Application.app);
-                log.info("Finished serialization");
-                handle.flush();
-            } catch (Exception ex) {
-                log.log(Level.SEVERE, "Serialization exception", ex);
-            } finally {
-                handle.flush();
+            } catch (IOException ex) {
+                shutdownLogger.error("something wrong during serialization", ex);
             }
+            shutdownLogger.info("ended serialization");
+            //it was configured not to have a 'flush' shutdown hook
+            Configurator.shutdown((org.apache.logging.log4j.core.LoggerContext) LogManager.getContext());
         }
     }
 }

@@ -14,7 +14,6 @@ import i3.io.IoUtils;
  */
 public class ReadImageFromCache {
 
-
     private final String key;
     private final static Path imagesDir = Bookjar.programLocation.resolve("images");
 
@@ -23,8 +22,7 @@ public class ReadImageFromCache {
     }
 
     /**
-     * @return the cached file read from the file system if it exist or
-     * null.
+     * @return the cached file read from the file system if it exist or null.
      */
     public BufferedImage read() {
         if (WriteImageToCache.turnedOff) {
@@ -32,6 +30,10 @@ public class ReadImageFromCache {
         }
         Path cached = IoUtils.getSafeFileSystemFile(imagesDir, key + "." + WriteImageToCache.bestFormat);
         try {
+            if (Files.exists(cached)) {
+                return ImageIO.read(cached.toFile());
+            }
+            cached = IoUtils.getSafeFileSystemFile(imagesDir, key + ".png");
             if (Files.exists(cached)) {
                 return ImageIO.read(cached.toFile());
             }

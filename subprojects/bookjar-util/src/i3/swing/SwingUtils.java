@@ -1,5 +1,7 @@
 package i3.swing;
 
+import i3.dragndrop.DefaultURLDropFactory;
+import i3.dragndrop.DropStrategy;
 import i3.util.Call;
 import i3.util.Factory;
 import java.awt.Component;
@@ -27,9 +29,7 @@ import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.JFileChooser;
 import javax.swing.SwingWorker;
-import i3.dragndrop.DefaultURLDropFactory;
-import i3.dragndrop.DropStrategy;
-import i3.io.IoUtils;
+import org.apache.logging.log4j.LogManager;
 
 /**
  * A static swing util class. All methods of this class are not thread safe, as
@@ -77,7 +77,7 @@ public final class SwingUtils {
                     //choose the "best" flavor and return a correct drop strategy
                     chosenDropStrategy = factory.create(flavors);
                 } catch (Exception ex) {
-                    IoUtils.log.warning("Drop rejected: " + ex.getMessage());
+                    LogManager.getLogger().warn("drop rejected: " + ex.getMessage());
                     dtde.rejectDrag();
                 }
             }
@@ -92,7 +92,7 @@ public final class SwingUtils {
                     chosenDropStrategy.drop(dtde);
                     dtde.dropComplete(true);
                 } catch (Exception ex) {
-                    IoUtils.log.warning("Couldn't drop object: " + ex.getMessage());
+                    LogManager.getLogger().warn("couldn't drop object: " + ex.getMessage());
                     dtde.dropComplete(false);
                 }
             }

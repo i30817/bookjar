@@ -9,6 +9,15 @@
     </configurations>
     <dependencies>
         <dependency org="junit"                            name="junit"                   rev="4.10"  conf="compile-test->master; runtime-test->master" />
+ <dependency org="org.apache.logging.log4j" name="log4j-api" rev="2.0-rc1" />
+<dependency org="org.apache.logging.log4j" name="log4j-core" rev="2.0-rc1" />
+<dependency org="org.apache.logging.log4j" name="log4j-1.2-api" rev="2.0-rc1" /> <!--log4j1 bridge-->
+
+<dependency org="com.google.api-client" name="google-api-client-java6" rev="1.17.0-rc" />
+<dependency org="com.google.http-client" name="google-http-client-gson" rev="1.17.0-rc" /> 
+<dependency org="com.google.apis" name="google-api-services-books" rev="v1-rev46-1.17.0-rc" />
+    
+    
         <dependency org="org.swinglabs.swingx"             name="swingx-common"           rev="1.6.5-1"   />
         <dependency org="org.swinglabs.swingx"             name="swingx-core"             rev="1.6.5-1"   />
         <dependency org="org.apache.lucene"                name="lucene-core"             rev="4.1.0"   />

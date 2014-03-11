@@ -8,22 +8,18 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.logging.Logger;
 import javax.swing.text.StyledDocument;
 
 /**
- * A BookLoader service provider interface.
- * In this class, extension refers to
- * the file extension without the dot.
- * The enum map is a argument of some
- * properties used by some implementations.
- * The possible arguments for now are
+ * A BookLoader service provider interface. In this class, extension refers to
+ * the file extension without the dot. The enum map is a argument of some
+ * properties used by some implementations. The possible arguments for now are
  * in the enum PROPERTIES.
+ *
  * @author microbiologia
  */
 public abstract class BookLoader {
 
-    public static final Logger log = Logger.getAnonymousLogger();
     private static ServiceLoader<BookLoader> loader = ServiceLoader.load(BookLoader.class);
     /**
      * Standardizes the parsed document
@@ -31,8 +27,8 @@ public abstract class BookLoader {
     protected Reparser reParser = new Reparser();
 
     /**
-     * Gets a book loader that can parse the
-     * given name (optional) + extension
+     * Gets a book loader that can parse the given name (optional) + extension
+     *
      * @param filename
      * @return
      */
@@ -51,8 +47,8 @@ public abstract class BookLoader {
     }
 
     /**
-     * Gets a book loader that can parse the
-     * given mimetype
+     * Gets a book loader that can parse the given mimetype
+     *
      * @param filename
      * @return
      */
@@ -71,12 +67,11 @@ public abstract class BookLoader {
     }
 
     /**
-     * Lowercase set of the suported extensions (without the dot)
-     * Not all files accepted by acceptFiles have a extension here
-     * for instance, compressed files don't contribute to this, but
-     * nevertheless accept "rar" files
-     * @return a set of all suppported extensions of the
-     * plugins.
+     * Lowercase set of the suported extensions (without the dot) Not all files
+     * accepted by acceptFiles have a extension here for instance, compressed
+     * files don't contribute to this, but nevertheless accept "rar" files
+     *
+     * @return a set of all suppported extensions of the plugins.
      */
     public static Set<String> allSupportedExtensions() {
         Set<String> list = new HashSet<String>();
@@ -100,15 +95,16 @@ public abstract class BookLoader {
     }
 
     /**
-     * The supported lowercase extensions
-     * for this loader (without the dot), if any
-     * exists otherwise a empty set
+     * The supported lowercase extensions for this loader (without the dot), if
+     * any exists otherwise a empty set
+     *
      * @return
      */
     public abstract Set<String> supportedExtensions();
 
     /**
      * If this BookLoader accepts reading the given filename
+     *
      * @param filename
      * @return
      */
@@ -116,6 +112,7 @@ public abstract class BookLoader {
 
     /**
      * If this BookLoader accepts reading the given mimetype
+     *
      * @param filename
      * @return
      */
@@ -124,7 +121,7 @@ public abstract class BookLoader {
     /**
      * This parses the text in the given string.
      */
-    public StyledDocument create(final String string, Map<Property,Object> properties) {
+    public StyledDocument create(final String string, Map<Property, Object> properties) {
         try {
             return create(new ByteArrayInputStream(string.getBytes("UTF-8")), properties);
         } catch (IOException ex) {
@@ -133,11 +130,10 @@ public abstract class BookLoader {
     }
 
     /**
-     * This parses the text in the given inputStream. Implementations
-     * should assume UTF-8 except in the cases where you can probe
-     * for the charset.
+     * This parses the text in the given inputStream. Implementations should
+     * assume UTF-8 except in the cases where you can probe for the charset.
      */
-    public abstract StyledDocument create(InputStream reader, Map<Property,Object> properties) throws IOException;
+    public abstract StyledDocument create(InputStream reader, Map<Property, Object> properties) throws IOException;
 
     /**
      * This parses the text in the given file.
@@ -146,5 +142,5 @@ public abstract class BookLoader {
      * @param properties properties used by some loaders
      * @throws IOException
      */
-    public abstract StyledDocument create(URL origin, Map<Property,Object> properties) throws IOException;
+    public abstract StyledDocument create(URL origin, Map<Property, Object> properties) throws IOException;
 }

@@ -12,7 +12,7 @@ import ca.odell.glazedlists.swing.DefaultEventListModel;
 import ca.odell.glazedlists.swing.DefaultEventSelectionModel;
 import ca.odell.glazedlists.swing.GlazedListsSwing;
 import ca.odell.glazedlists.swing.TextComponentMatcherEditor;
-import i3.main.Bookjar;
+import i3.decompress.ExtractionException;
 import i3.main.Library;
 import i3.main.LocalBook;
 import i3.swing.component.ComposedJPopupMenu;
@@ -43,7 +43,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.logging.Level;
 import javax.swing.Action;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -55,6 +54,7 @@ import javax.swing.JTextField;
 import javax.swing.ListModel;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
+import org.apache.logging.log4j.LogManager;
 import org.jdesktop.swingx.prompt.PromptSupport;
 
 public class LibraryView implements Serializable {
@@ -244,12 +244,12 @@ public class LibraryView implements Serializable {
         return books.updateLibrary(library);
     }
 
-    private static class RenderBook implements ImageList.RenderValues<LocalBook> {
+    private class RenderBook implements ImageList.RenderValues<LocalBook> {
 
         //operation extremely memory hungry. OOME danger. So only one thread at a time.
         private final transient ExecutorService extractPool = newLIFOScalingExecutor("ExtractImageFromFile", 1, 15L, true);
-        //Offloat to a webservice (thank you open library). Go wild.
-        private final transient ExecutorService networkPool = newLIFOScalingExecutor("OpenLibrary", 6, 5L, true);
+        //google api is 2 request per second... needs tuning
+        private final transient ExecutorService networkPool = newLIFOScalingExecutor("GoogleBooks", 3, 5L, true);
 
         @Override
         public void requestCellImage(final ImageList<LocalBook> list, final LocalBook entry, final int imageWidth, final int imageHeight) {
@@ -285,8 +285,13 @@ public class LibraryView implements Serializable {
                             new WriteImageToCache(name).write(img);
                             return;
                         }
+                    } catch (ExtractionException e) {
+                        books.replace(entry.setBroken(true));
+                        //TODO: notify about corrupt books
+                        //Trick of Light 
+                        LogManager.getLogger().error(entry.toString() + " appears to be corrupt", e);
                     } catch (Exception e) {
-                        Bookjar.log.log(Level.SEVERE, "Could not get cover image", e);
+                        LogManager.getLogger().error("could not get cover image for " + entry.toString(), e);
                     }
                     networkPool.execute(new CoverSearchOrRandom<>(name, entry, list, imageWidth, imageHeight));
                     Thread.yield();

@@ -3,6 +3,8 @@ package i3.decompress;
 import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
 import com.github.junrar.rarfile.FileHeader;
+import i3.io.IoUtils;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
@@ -17,7 +19,9 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-import i3.io.IoUtils;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import org.apache.logging.log4j.LogManager;
 
 @SuppressWarnings(value = "unchecked")
 public final class RarExtractor extends Extractor {
@@ -30,14 +34,45 @@ public final class RarExtractor extends Extractor {
     private Archive rarArchive;
     private List<FileHeader> headers;
 
+    static {
+        //com.github.junrar.Archive prints and ignores some exceptions
+        //(including a nullpointer without filename),
+        //catch them so we can report to the user with the real filename/do something else
+        java.util.logging.Logger.getLogger(com.github.junrar.Archive.class.getName())
+                .addHandler(new Handler() {
+
+                    @Override
+                    public void publish(LogRecord record) {
+                        Throwable t = record.getThrown();
+                        if (t != null) {
+                            throw new IllegalStateException("possibly corrupt or encrypted rar file", t);
+                        }
+                    }
+
+                    @Override
+                    public void flush() {
+                    }
+
+                    @Override
+                    public void close() throws SecurityException {
+                    }
+                });
+    }
+
     public RarExtractor() {
         //serviceloader constructor
     }
 
     public RarExtractor(Path fileToExtract) throws RarException, IOException {
+
+        File f = fileToExtract.toFile();
+        if (f == null) {
+            throw new NullPointerException();
+        }
+
+        this.rarArchive = new Archive(fileToExtract.toFile());
         this.nextIndex = new AtomicInteger();
         this.threadPool = Executors.newSingleThreadExecutor(IoUtils.createThreadFactory(true, "UnrarExtractAux"));
-        this.rarArchive = new Archive(fileToExtract.toFile());
         this.headers = rarArchive.getFileHeaders();
     }
 
@@ -46,17 +81,17 @@ public final class RarExtractor extends Extractor {
     }
 
     public InputStream getInputStream(final Object headerObject) throws IOException {
-                    final InputStreamPipe in = new InputStreamPipe();
-                    final PipedOutputStream out = new PipedOutputStream(in);
-                    /**
-                     * For this to advance the the client needs to call close() on any previous
-                     * returned InputStream.
-                     */
-                    threadPool.execute(new ExtractToInputStreamTask(
-                            new WeakReference<>(rarArchive),
-                            headers, nextIndex, (FileHeader) headerObject,
-                            out, in));
-                    return in;
+        final InputStreamPipe in = new InputStreamPipe();
+        final PipedOutputStream out = new PipedOutputStream(in);
+        /**
+         * For this to advance the the client needs to call close() on any
+         * previous returned InputStream.
+         */
+        threadPool.execute(new ExtractToInputStreamTask(
+                new WeakReference<>(rarArchive),
+                headers, nextIndex, (FileHeader) headerObject,
+                out, in));
+        return in;
     }
 
     public void writeInto(Object headerObject, OutputStream out) throws IOException {
@@ -95,18 +130,18 @@ public final class RarExtractor extends Extractor {
 
     public Long getFileSize(Object headerObject) {
         FileHeader rarHeader = (FileHeader) headerObject;
-        return Long.valueOf(rarHeader.getFullUnpackSize());
+        return rarHeader.getFullUnpackSize();
     }
 
     public Long getCompressedFileSize(Object headerObject) {
         FileHeader rarHeader = (FileHeader) headerObject;
-        return Long.valueOf(rarHeader.getFullPackSize());
+        return rarHeader.getFullPackSize();
     }
 
     public Long getCRC32(Object headerObject) {
         FileHeader rarHeader = (FileHeader) headerObject;
         //bug in the library
-        return Long.valueOf(rarHeader.getFileCRC() & 0X00000000ffffffffL);
+        return rarHeader.getFileCRC() & 0X00000000ffffffffL;
     }
 
     public boolean isDirectory(Object headerObject) {
@@ -265,7 +300,7 @@ public final class RarExtractor extends Extractor {
 
         public void run() {
             //close the stream otherwise the reader waits forever
-            try (OutputStream out = this.out){
+            try (OutputStream out = this.out) {
                 Archive rar = weakArchive.get();
                 if (rar != null) {
                     extract(rar, headerObject, headers, nextIndex, out);
@@ -273,7 +308,7 @@ public final class RarExtractor extends Extractor {
             } catch (Throwable ex) {
                 //HACK: Its expected for the reader to close the stream... maybe before reading
                 if ("Pipe closed".equals(ex.getMessage()) || (ex.getCause() != null && "Pipe closed".equals(ex.getCause().getMessage()))) {
-                    Selector.log.fine("Rar client Thread closed pipe");
+                    LogManager.getLogger().info("rar client thread closed pipe");
                 } else {
                     //Need to propagate to reader. See InputStreamPipe
                     in.setError(ex);

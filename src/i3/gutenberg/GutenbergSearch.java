@@ -2,7 +2,6 @@ package i3.gutenberg;
 
 import i3.io.IoUtils;
 import i3.io.ProgressMonitorStream;
-import i3.main.Bookjar;
 import static i3.thread.Threads.*;
 import java.awt.Component;
 import java.io.Closeable;
@@ -11,9 +10,9 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
-import java.util.logging.Level;
 import java.util.zip.ZipInputStream;
 import javax.swing.JPanel;
+import org.apache.logging.log4j.LogManager;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
@@ -81,7 +80,7 @@ public final class GutenbergSearch implements Closeable {
         } catch (IOException ex) {
             //if this happens the object is inconsistent and all other public
             //methods will fail with IOException, except isReady(). Good enough for me.
-            Bookjar.log.log(Level.SEVERE, "Lucene index error, other methods will fail", ex);
+            LogManager.getLogger().error("lucene index error, other methods will fail", ex);
         }
         cacheDir = tmpDir;
     }
@@ -111,7 +110,7 @@ public final class GutenbergSearch implements Closeable {
      */
     public void startThreadedIndex(final JPanel view) {
         if (cacheDir == null) {
-            Bookjar.log.log(Level.SEVERE, "Could not index lucene database due to previous error");
+            LogManager.getLogger().error("could not index lucene database due to previous error");
             return;
         }
 
@@ -119,10 +118,10 @@ public final class GutenbergSearch implements Closeable {
             @Override
             public void run() {
                 try {
-                    try{
-                    prepare(view);
-                    } catch(CorruptIndexException ex){
-                        Bookjar.log.log(Level.WARNING, "Existing index format was corrupt, deleting index directory before retrying", ex);
+                    try {
+                        prepare(view);
+                    } catch (CorruptIndexException ex) {
+                        LogManager.getLogger().warn("existing index format was corrupt, deleting index directory before retrying", ex);
                         //delete the corrupt index here because we just estabilished there are no readers - they'd throw too.
                         //(this is needed since IndexWriter throws IndexFormatTooOldException even if opened only CREATE mode)
                         IoUtils.deleteFileOrDir(dir);
@@ -141,7 +140,7 @@ public final class GutenbergSearch implements Closeable {
                         manager.release(s);
                     }
                 } catch (IOException e) {
-                    Bookjar.log.log(Level.WARNING, "Indexing interrupted", e);
+                    LogManager.getLogger().warn("indexing interrupted", e);
                 }
             }
         };
@@ -184,12 +183,11 @@ public final class GutenbergSearch implements Closeable {
      * mimetype, extent and url separated by spaces.
      *
      * @param bookQuery The terms to search books for, if null or empty nop.
-     * @param subjects the subjects to search
-     * If not null and not empty it will filter the results of bookQuery
-     * except if bookQuery is nop, where it will search subjects instead.
-     * If null or empty, nop (any subject).
-     * @param languageLocale the language of the books to search
-     * If null or Locale.ROOT, nop (any language).
+     * @param subjects the subjects to search If not null and not empty it will
+     * filter the results of bookQuery except if bookQuery is nop, where it will
+     * search subjects instead. If null or empty, nop (any subject).
+     * @param languageLocale the language of the books to search If null or
+     * Locale.ROOT, nop (any language).
      * @param maxHits maximum number of returned hits
      * @param callback a callback to use the returned documents
      * @throws a exception if a error occurred connecting to the database or
@@ -197,7 +195,7 @@ public final class GutenbergSearch implements Closeable {
      */
     public void query(String bookQuery, String subjects, Locale languageLocale, int maxHits, SearchCallback callback) throws IOException, ParseException {
         if (!isReady()) {
-            Bookjar.log.log(Level.SEVERE, "Could not query lucene database due to previous error");
+            LogManager.getLogger().error("could not query lucene database due to previous error");
             return;
         }
         //preprocessing
@@ -252,7 +250,6 @@ public final class GutenbergSearch implements Closeable {
             Filter f = new QueryWrapperFilter(parser.parse("language:" + filterLanguage));
             query = new FilteredQuery(query, f);
         }
-
 
         IndexSearcher s = manager.acquire();
         try {

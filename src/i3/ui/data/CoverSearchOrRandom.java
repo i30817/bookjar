@@ -6,8 +6,9 @@ import i3.swing.component.ImageList;
 import i3.thread.Cancelable;
 
 /**
- * Searches for a cover image and returns it if found,
- * or returns a lazy aleatory (per session) image.
+ * Searches for a cover image and returns it if found, or returns a lazy
+ * aleatory (per session) image.
+ *
  * @author fc30817
  */
 public final class CoverSearchOrRandom<E extends Book> extends Cancelable {
@@ -18,7 +19,7 @@ public final class CoverSearchOrRandom<E extends Book> extends Cancelable {
     private final int imageWidth;
     private final int imageHeight;
     private final String name;
-    private boolean enableImageSearch;
+    private boolean enableImageSearch = false;
 
     public CoverSearchOrRandom(String name, E book, ImageList<E> list, int imageWidth, int imageHeight) {
         this.list = list;

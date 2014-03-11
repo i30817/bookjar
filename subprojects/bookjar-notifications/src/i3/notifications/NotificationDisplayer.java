@@ -41,16 +41,15 @@
  */
 package i3.notifications;
 
+import i3.notifications.StatusDisplayer.Message;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
-import i3.notifications.StatusDisplayer.Message;
+import org.apache.logging.log4j.LogManager;
 import org.openide.util.ImageUtilities;
 import org.openide.util.Lookup;
 import org.openide.util.NbBundle;
@@ -204,7 +203,7 @@ public abstract class NotificationDisplayer {
     public static NotificationDisplayer getDefault() {
         NotificationDisplayer res = Lookup.getDefault().lookup(NotificationDisplayer.class);
         if (null == res) {
-            Logger.getLogger(NotificationDisplayer.class.getName()).log(Level.INFO, "No NotificationDisplayer implementation available."); //NOI18N
+            LogManager.getLogger().info("no NotificationDisplayer implementation available."); //NOI18N
             res = new SimpleNotificationDisplayer();
         }
         return res;

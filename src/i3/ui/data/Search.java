@@ -1,40 +1,79 @@
 package i3.ui.data;
 
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.http.GenericUrl;
+import com.google.api.client.http.HttpRequest;
+import com.google.api.client.http.HttpRequestInitializer;
+import com.google.api.client.http.HttpResponse;
+import com.google.api.client.http.HttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.services.books.Books;
+import com.google.api.services.books.BooksRequestInitializer;
+import com.google.api.services.books.model.Volume;
+import com.google.api.services.books.model.Volume.VolumeInfo;
+import com.google.api.services.books.model.Volume.VolumeInfo.ImageLinks;
+import com.google.api.services.books.model.Volume.VolumeInfo.IndustryIdentifiers;
+import i3.main.Book;
+import i3.util.Tuples.T2;
 import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.logging.Level;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
 import javax.imageio.ImageIO;
-import i3.main.Book;
-import i3.main.Bookjar;
-import i3.util.Tuples.T2;
-import i3.io.FastURLEncoder;
-import i3.io.IoUtils;
+import org.apache.logging.log4j.LogManager;
 
 public class Search {
-    public static final int READ_TIMEOUT = 5000;
-    private volatile HttpURLConnection interruptableConn;
+
     private final Book bookField;
-    private static final String SEARCH_SERVICE = "http://openlibrary.org/api/search?q=";
-    private static final String IMAGE_SERVICE = "http://covers.openlibrary.org/b/olid/";
-    private static final Pattern SEARCH_PATTERN = Pattern.compile("\"/b/(.+?)\"");
-    //warning : shared boolean for exceptions...
+    private HttpResponse currentlyDownloading;
     private static volatile int failedDownloading;
-    private static final int MAXIMUM_DOWNLOAD_FAILURES = 15;
+    private static final int TIMEOUT = 1000 * 15; //15 seconds
+    private static final int MAXIMUM_DOWNLOAD_FAILURES = 100;
+
+    private static class GoogleNet {
+
+        static Books client;
+        final static Map<Book, Boolean> noImg
+                = Collections.synchronizedMap(new IdentityHashMap<Book, Boolean>());
+
+        static {
+            try {
+                HttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
+
+                BooksRequestInitializer key = new BooksRequestInitializer("AIzaSyC96zafy6K9uCvjRbxEkl142zP5Je_EIvk");
+                HttpRequestInitializer timeout = new HttpRequestInitializer() {
+
+                    @Override
+                    public void initialize(HttpRequest request) throws IOException {
+                        request.setConnectTimeout(TIMEOUT);
+                        request.setReadTimeout(TIMEOUT);
+                        request.setNumberOfRetries(0);//lol it's 10 by default
+                    }
+                };
+
+                client = new Books.Builder(httpTransport, GsonFactory.getDefaultInstance(), null)
+                        .setHttpRequestInitializer(timeout)
+                        .setBooksRequestInitializer(key)
+                        .setApplicationName("bookjar-google").build();
+            } catch (Exception ex) {
+                LogManager.getLogger().error("google api not available, will not download images", ex);
+            }
+        }
+    }
 
     public Search(Book book) {
         super();
         this.bookField = book;
     }
 
+//    Charles Stross - [Laundry SS] - Overtime
     public BufferedImage searchImage() {
-        if (failedDownloading >= MAXIMUM_DOWNLOAD_FAILURES) {
+        if (GoogleNet.client == null || failedDownloading >= MAXIMUM_DOWNLOAD_FAILURES
+                || GoogleNet.noImg.containsKey(bookField)) {
             return null;
         }
         T2<String[], String> localTuple = bookField.authorsAndTitle();
@@ -43,74 +82,84 @@ public class Search {
             return null;
         }
         String authorsQuery = createQuery(localTuple.getFirst());
-        if ("".equals(authorsQuery)) {
-            return null;
-        }
-        String response = query(book, authorsQuery);
-        if (response == null) {
-            return null;
-        }
-
         try {
-            return searchImage(SEARCH_PATTERN.matcher(response));
+            List<Volume> vols = GoogleNet.client.volumes()
+                    .list("intitle:\"" + book + "\"" + authorsQuery)
+                    .setMaxResults(1L)
+                    .setShowPreorders(true)
+                    //.setPrettyPrint(true)
+                    .setFields("items(volumeInfo(imageLinks/*,industryIdentifiers/*))")
+                    .execute().getItems();
+            if (vols == null) {
+                return null;
+            }
+            VolumeInfo v = vols.get(0).getVolumeInfo();
+            ImageLinks images = v.getImageLinks();
+//            System.out.println(v);
+            String image = null;
+            if (images != null) {
+                image = images.getMedium();
+                if (image == null) {
+                    image = images.getSmall();
+                }
+                if (image == null) {
+                    image = images.getLarge();
+                }
+                if (image == null) {
+                    image = images.getExtraLarge();
+                }
+            }
+            if (image != null) {
+                return streamCover(image);
+            } else if (images != null && (image = images.getThumbnail()) != null) {
+                image = image.replace("&zoom=1", "").replace("&edge=curl", "");
+                return streamCover(image);
+            } else if (v.getIndustryIdentifiers() != null) {//try open library
+                for (IndustryIdentifiers id : v.getIndustryIdentifiers()) {
+                    if ("ISBN_13".equals(id.getType())) {
+                        String possibleCover = "http://covers.openlibrary.org/b/isbn/" + id.getIdentifier() + "-M.jpg?default=false";
+                        return streamCover(possibleCover);
+                    }
+                }
+            }
         } catch (IOException blah) {
-            Bookjar.log.log(Level.CONFIG, "Image service failure", blah);
+            LogManager.getLogger().warn("failed to connect to cover webservices: " + blah.getMessage());
+            GoogleNet.noImg.put(bookField, Boolean.TRUE);
             failedDownloading++;
+        } finally {
+            if (failedDownloading >= MAXIMUM_DOWNLOAD_FAILURES) {
+                String msg = "image download disabled because of maximum amount("
+                        + failedDownloading
+                        + ") of network failures";
+                LogManager.getLogger().error(msg);
+            }
         }
         return null;
+    }
+
+    private BufferedImage streamCover(String cover) throws IOException {
+        GenericUrl coverURL = new GenericUrl(cover);
+        HttpRequest req = GoogleNet.client.getRequestFactory().buildGetRequest(coverURL);
+        InputStream image;
+        synchronized (this) {
+            currentlyDownloading = req.execute();
+            image = currentlyDownloading.getContent();
+        }
+        return ImageIO.read(new BufferedInputStream(image));
     }
 
     private String createQuery(String[] authors) {
         String authorsQuery = "";
         for (String author : authors) {
-            if ("".equals(authorsQuery)) {
-                authorsQuery += "authors:(" + author + ")";
-            } else {
-                authorsQuery += " OR authors:(" + author + ")";
-            }
+            authorsQuery += " inauthor:\"" + author + "\"";
         }
         return authorsQuery;
     }
 
-    private String query(String book, String authorsQuery) {
-        String query = "{\"query\":\" title:(" + book + ") AND (" + authorsQuery + ") NOT (audio OR Audio)\"}";
-        try {
-            URL url = new URL(SEARCH_SERVICE + FastURLEncoder.encode(query));
-            interruptableConn = (HttpURLConnection) url.openConnection();
-            return IoUtils.toString(interruptableConn.getInputStream(), true);
-        } catch (Exception blah) {
-            Bookjar.log.log(Level.CONFIG, "Image service failure", blah);
-            failedDownloading++;
-            return null;
-        }
-    }
-
-    private BufferedImage searchImage(Matcher m) throws IOException {
-        InputStream stream = null;
-        while (m.find()) {
-            try {
-                URL url = new URL(IMAGE_SERVICE + m.group(1) + "-M.jpg?default=false");
-                interruptableConn = (HttpURLConnection) url.openConnection();
-                interruptableConn.setUseCaches(false);
-                interruptableConn.setReadTimeout(READ_TIMEOUT);
-                stream = interruptableConn.getInputStream();
-                return ImageIO.read(new BufferedInputStream(stream));
-            } catch (FileNotFoundException notFound) {
-                //normal
-                continue;
-            } finally {
-                IoUtils.close(stream);
-            }
-        }
-        return null;
-    }
-
-    public void cancel(Exception cause) throws Exception {
-        if (interruptableConn != null) {
-            interruptableConn.setConnectTimeout(1);
-            interruptableConn.setReadTimeout(1);
-            interruptableConn.disconnect();
-            Bookjar.log.log(Level.WARNING, "Disconnecting url connection {0}", interruptableConn);
+    public synchronized void cancel(Exception cause) throws Exception {
+        if (currentlyDownloading != null) {
+            currentlyDownloading.disconnect();
+            LogManager.getLogger().warn("disconnecting image connection for book " + bookField.toString());
         }
     }
 }

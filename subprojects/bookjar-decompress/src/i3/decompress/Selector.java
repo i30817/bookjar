@@ -1,5 +1,6 @@
 package i3.decompress;
 
+import i3.io.IoUtils;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URL;
@@ -15,24 +16,22 @@ import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import i3.io.IoUtils;
 
 /**
- * A selection fluent interface.
- * clients will use it like this:
+ * A selection fluent interface. clients will use it like this:
  *
- * selector.selectBySuffix(".rtf", false).selectByModificationDate(LARGER_THAN, someDate);
- * This is an implied or, meaning both kind of archives are to be extraced.
+ * selector.selectBySuffix(".rtf", false).selectByModificationDate(LARGER_THAN,
+ * someDate); This is an implied or, meaning both kind of archives are to be
+ * extraced.
  *
- * On the other hand you can use it like this:
- * selector.selectBySuffix(".rtf", false).subSelector().selectByModificationDate(LARGER_THAN, someDate);
- * Where the result of the first is filtered.
+ * On the other hand you can use it like this: selector.selectBySuffix(".rtf",
+ * false).subSelector().selectByModificationDate(LARGER_THAN, someDate); Where
+ * the result of the first is filtered.
  *
- * The selectByXXX() methods will not add results if you try to use
- * them on a file where XXX is not supported. A warning will be raised in these cases.
+ * The selectByXXX() methods will not add results if you try to use them on a
+ * file where XXX is not supported. A warning will be raised in these cases.
  *
  * To order the results use the orderBy(Ascending|Descending)(Comparator c).
  *
@@ -44,14 +43,15 @@ import i3.io.IoUtils;
 @SuppressWarnings(value = "unchecked")
 public final class Selector implements Closeable, Iterable<FileView> {
 
-    public static final Logger log = Logger.getAnonymousLogger();
     private static ServiceLoader<ExtractorProvider> loader = ServiceLoader.load(ExtractorProvider.class);
 
     /**
      * Get a selection for a local file.
+     *
      * @param fileToExtract
      * @return a valid view over the file or null if no provider found
-     * @throws ExtractionException if file is not valid (not found, corrupt etc).
+     * @throws ExtractionException if file is not valid (not found, corrupt
+     * etc).
      */
     public static Selector from(Path localFile) throws ExtractionException {
         try {
@@ -60,6 +60,8 @@ public final class Selector implements Closeable, Iterable<FileView> {
                     return new Selector(c.create(localFile));
                 }
             }
+        } catch (ExtractionException e) {
+            throw e;
         } catch (Exception e) {
             throw new ExtractionException(e);
         }
@@ -67,13 +69,13 @@ public final class Selector implements Closeable, Iterable<FileView> {
     }
 
     /**
-     * Get a selection for a url. If the url does not
-     * point to a local file, a copy is downloaded
-     * to the tmp directory.
+     * Get a selection for a url. If the url does not point to a local file, a
+     * copy is downloaded to the tmp directory.
+     *
      * @param fileToExtract
-     * @return a valid view over the file or null if no
-     * provider found.
-     * @throws ExtractionException if file is not valid (not found, corrupt etc).
+     * @return a valid view over the file or null if no provider found.
+     * @throws ExtractionException if file is not valid (not found, corrupt
+     * etc).
      */
     public static Selector from(URL urlToExtract) throws ExtractionException {
         try {
@@ -116,6 +118,7 @@ public final class Selector implements Closeable, Iterable<FileView> {
 
     /**
      * Return if archive is empty
+     *
      * @return is empty
      */
     public boolean isEmpty() {
@@ -124,6 +127,7 @@ public final class Selector implements Closeable, Iterable<FileView> {
 
     /**
      * Return the number of selected files
+     *
      * @return number of selected files
      */
     public int selectedSize() {
@@ -132,6 +136,7 @@ public final class Selector implements Closeable, Iterable<FileView> {
 
     /**
      * Return the number of files in the archive
+     *
      * @return number of files in the archive
      */
     public int size() {
@@ -146,8 +151,9 @@ public final class Selector implements Closeable, Iterable<FileView> {
     }
 
     /**
-     * You can only get InputStreams from the returned contents before
-     * close() is called.
+     * You can only get InputStreams from the returned contents before close()
+     * is called.
+     *
      * @throws java.io.IOException
      */
     @Override
@@ -176,8 +182,9 @@ public final class Selector implements Closeable, Iterable<FileView> {
     }
 
     /**
-     * Creates a selector where the not selected archives of the current Selector
-     * are the only archives (to be) selectable by the returned Selector
+     * Creates a selector where the not selected archives of the current
+     * Selector are the only archives (to be) selectable by the returned
+     * Selector
      */
     public Selector inverseSelector() {
         if (workSet.isEmpty()) {
@@ -193,6 +200,7 @@ public final class Selector implements Closeable, Iterable<FileView> {
 
     /**
      * Tries to reserve for extraction all files
+     *
      * @return this
      */
     public Selector selectAll() {
@@ -203,9 +211,10 @@ public final class Selector implements Closeable, Iterable<FileView> {
     }
 
     /**
-     * Tries to reserve for extraction all the files
-     * where  ineqValue Inequality FileExaminer.examine(current) == true
-     * See the Contents enum for a lot of arguments for this.
+     * Tries to reserve for extraction all the files where ineqValue Inequality
+     * FileExaminer.examine(current) == true See the Contents enum for a lot of
+     * arguments for this.
+     *
      * @param ineq inequality given
      * @param examiner the date
      * @return this
@@ -228,8 +237,9 @@ public final class Selector implements Closeable, Iterable<FileView> {
     }
 
     /**
-     * Tries to reserve for extraction all the files
-     * with a filename that match the  given regex.
+     * Tries to reserve for extraction all the files with a filename that match
+     * the given regex.
+     *
      * @param regex
      * @return this
      * @throws PatternSyntaxException if the regex is invalid
@@ -251,8 +261,9 @@ public final class Selector implements Closeable, Iterable<FileView> {
     }
 
     /**
-     * Tries to reserve for extraction all the files
-     * with a filename that match the  given regex.
+     * Tries to reserve for extraction all the files with a filename that match
+     * the given regex.
+     *
      * @param regex
      * @param int java regex flags (from java.​util.​regex.​Pattern)
      * @return this
@@ -274,9 +285,10 @@ public final class Selector implements Closeable, Iterable<FileView> {
         return this;
     }
 
-        /**
-     * Tries to reserve for extraction all the files
-     * with a filepath that match the  given regex.
+    /**
+     * Tries to reserve for extraction all the files with a filepath that match
+     * the given regex.
+     *
      * @param regex
      * @param int java regex flags (from java.​util.​regex.​Pattern)
      * @return this
@@ -300,6 +312,7 @@ public final class Selector implements Closeable, Iterable<FileView> {
 
     /**
      * Tries to reserve for extraction all the files with the given suffix.
+     *
      * @param suffix
      * @param caseSensitive
      * @return this
@@ -327,6 +340,7 @@ public final class Selector implements Closeable, Iterable<FileView> {
 
     /**
      * Order by ascending content.
+     *
      * @param c content comparator
      * @return this
      */
@@ -342,9 +356,9 @@ public final class Selector implements Closeable, Iterable<FileView> {
 
     /**
      * Gets the first selected or null
-     * @return the first selected or null if
-     * there is nothing selected (because nothing was selected
-     * or the archive has no matching files)
+     *
+     * @return the first selected or null if there is nothing selected (because
+     * nothing was selected or the archive has no matching files)
      */
     public FileView getSelected() {
         Iterator it = workSet.iterator();
@@ -357,9 +371,9 @@ public final class Selector implements Closeable, Iterable<FileView> {
 
     /**
      * Get the largest content selected.
+     *
      * @param c content comparator
-     * @return the contents, null if there
-     * are no selected contents
+     * @return the contents, null if there are no selected contents
      */
     public FileView getSelectedMax(FileComparator c) {
         try {
@@ -372,9 +386,9 @@ public final class Selector implements Closeable, Iterable<FileView> {
 
     /**
      * Get the smallest content selected.
+     *
      * @param c content comparator
-     * @return the contents, null if there
-     * are no selected contents
+     * @return the contents, null if there are no selected contents
      */
     public FileView getSelectedMin(FileComparator c) {
         try {
@@ -387,6 +401,7 @@ public final class Selector implements Closeable, Iterable<FileView> {
 
     /**
      * Order by descending content.
+     *
      * @param c content comparator
      * @return this
      */
@@ -401,13 +416,13 @@ public final class Selector implements Closeable, Iterable<FileView> {
     }
 
     /**
-     * Extracts all the files specified.
-     * WARNING: if FileView.getInputStream() was called
-     * call close() on it input stream given before trying to use
-     * the next inputStream.
+     * Extracts all the files specified. WARNING: if FileView.getInputStream()
+     * was called call close() on it input stream given before trying to use the
+     * next inputStream.
+     *
      * @return A Iterator/Iterable with the contents of the selected files.
-     * @throws ConcurrentModificationException if Selector is
-     * modified while iterating over the result.
+     * @throws ConcurrentModificationException if Selector is modified while
+     * iterating over the result.
      */
     @Override
     public ContentsIterator iterator() {
@@ -415,13 +430,13 @@ public final class Selector implements Closeable, Iterable<FileView> {
     }
 
     /**
-     * As iterator() only the first numberToExtract files specified.
-     * WARNING: if FileView.getInputStream() was called
-     * call close() on it input stream given before trying to use
-     * the next inputStream.
+     * As iterator() only the first numberToExtract files specified. WARNING: if
+     * FileView.getInputStream() was called call close() on it input stream
+     * given before trying to use the next inputStream.
+     *
      * @return A Iterator/Iterable with the contents of the selected files.
-     * @throws ConcurrentModificationException if Selector is
-     * modified while iterating over the result.
+     * @throws ConcurrentModificationException if Selector is modified while
+     * iterating over the result.
      */
     public ContentsIterator iterator(int numberToExtract) {
         int toExtract = Math.max(0, Math.min(numberToExtract, workSet.size()));

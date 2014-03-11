@@ -1,7 +1,6 @@
 package i3.io;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,7 +12,7 @@ import java.io.Serializable;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
-import java.util.logging.Level;
+import org.apache.logging.log4j.LogManager;
 
 /**
  * This class reads objects from a file. It also needs to be close()-ed. It has
@@ -42,7 +41,7 @@ public final class ObjectsReader implements Closeable {
             innerChannel = innerStream.getChannel();
             stream = new ObjectInputStream(new BufferedInputStream(innerStream));
         } catch (IOException ex) {
-            IoUtils.log.log(Level.WARNING, "Couldn''t init the ObjectReader, maybe there is no file {0} yet?", file);
+            LogManager.getLogger().warn("couldn't init the ObjectReader, maybe there is no file " + file + " yet?");
         }
     }
 
@@ -50,7 +49,7 @@ public final class ObjectsReader implements Closeable {
         try {
             return innerChannel != null && stream != null && innerChannel.position() < fileSize;
         } catch (IOException ex) {
-            IoUtils.log.log(Level.SEVERE, "Couldn't instantiate object from factory", ex);
+            LogManager.getLogger().error("couldn't instantiate object from stream", ex);
             return false;
         }
     }
@@ -78,7 +77,7 @@ public final class ObjectsReader implements Closeable {
         try {
             return factory.call();
         } catch (Exception ex) {
-            IoUtils.log.log(Level.SEVERE, "Couldn't instantiate object from factory", ex);
+            LogManager.getLogger().error("couldn't instantiate object from factory", ex);
             throw new IllegalStateException(ex);
         }
     }
@@ -104,7 +103,7 @@ public final class ObjectsReader implements Closeable {
         try {
             return (T) factory.newInstance();
         } catch (InstantiationException | IllegalAccessException ex) {
-            IoUtils.log.log(Level.SEVERE, "Couldn't instantiate object from factory", ex);
+            LogManager.getLogger().error("couldn't instantiate object from class", ex);
             throw new IllegalStateException(ex);
         }
     }
@@ -128,7 +127,7 @@ public final class ObjectsReader implements Closeable {
         if (raw != null && instance.getClass().isInstance(raw)) {
             return (T) raw;
         } else if (raw != null) {
-            IoUtils.log.severe("Saved object was of the wrong class " + raw.getClass());
+            LogManager.getLogger().error("saved object was of the wrong class " + raw.getClass());
         }
         return instance;
     }
@@ -155,8 +154,8 @@ public final class ObjectsReader implements Closeable {
     private Object readObjectQuietly() {
         try {
             return (stream == null) ? null : stream.readObject();
-        } catch (IOException | ClassNotFoundException ex) {
-            IoUtils.log.log(Level.SEVERE, "Couldn't read saved object", ex);
+        } catch (Exception ex) {
+            LogManager.getLogger().error("couldn't read saved object: " + ex.getMessage());
         }
         return null;
     }
@@ -174,12 +173,10 @@ public final class ObjectsReader implements Closeable {
      * If possible writes objects. Allows null objects
      */
     public static void writeObjects(Path objectLocation, Serializable... obj) throws IOException {
-        FileOutputStream st = new FileOutputStream(objectLocation.toFile());
-        try (ObjectOutputStream s = new ObjectOutputStream(new BufferedOutputStream(st, 40000))) {
+        try (ObjectOutputStream s = new ObjectOutputStream(new FileOutputStream(objectLocation.toFile()))) {
             for (Serializable a : obj) {
                 s.writeObject(a);
             }
-            s.flush();
         }
     }
 

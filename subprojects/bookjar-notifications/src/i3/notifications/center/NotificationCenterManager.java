@@ -41,14 +41,13 @@
  */
 package i3.notifications.center;
 
+import i3.notifications.NotificationDisplayer.Category;
+import i3.notifications.NotificationImpl;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 import javax.swing.SwingUtilities;
-import i3.notifications.NotificationImpl;
-import i3.notifications.NotificationDisplayer.Category;
 
 /**
  *
@@ -217,10 +216,6 @@ public class NotificationCenterManager {
         } else {
             SwingUtilities.invokeLater(r);
         }
-    }
-
-    static Logger getLogger() {
-        return Logger.getLogger(NotificationCenterManager.class.getName());
     }
 
     public boolean isEnabled(NotificationImpl notification) {

@@ -1,11 +1,9 @@
 package i3.thread;
 
-import java.util.logging.Level;
-import i3.io.IoUtils;
+import org.apache.logging.log4j.LogManager;
 
 /**
- * Cancellables are runnables that can
- * be cancelled when interrupted and used
+ * Cancellables are runnables that can be cancelled when interrupted and used
  * with the Executors returned by util.threads.Threads.
  *
  * @author i30817
@@ -17,7 +15,7 @@ public abstract class Cancelable implements Runnable {
         try {
             compute();
         } catch (Exception ex) {
-            IoUtils.log.log(Level.SEVERE, "Chain threw exception, cancelling: ", ex);
+            LogManager.getLogger().error("chain threw exception, cancelling: ", ex);
             doCancel(ex);
         }
     }
@@ -25,29 +23,26 @@ public abstract class Cancelable implements Runnable {
     void doCancel(Exception ex) {
         try {
             cancel(ex);
-        } catch (Throwable e) {
-            IoUtils.log.log(Level.SEVERE, "Cancel threw exception: ", e);
+        } catch (Exception e) {
+            LogManager.getLogger().error("cancel threw exception: ", e);
         }
     }
 
     /**
-     * Do the computation.
-     * If an unrecoverable error/exception occurs, you should
-     * let it escape, so that cancel can be called.
+     * Do the computation. If an unrecoverable error/exception occurs, you
+     * should let it escape, so that cancel can be called.
      */
     protected abstract void compute() throws Exception;
 
     /**
-     * Cancel a link. This is automatically called
-     * when runLink throws a Exception.
-     * It can be manually called by Executors returned
-     * by Threads if shutdown is called and a ChainCallable
-     * was running
+     * Cancel a link. This is automatically called when runLink throws a
+     * Exception. It can be manually called by Executors returned by Threads if
+     * shutdown is called and a ChainCallable was running
+     *
      * @see Threads
      *
-     * Dont assume cancel() is called before, during or after
-     * runLink(), or in the same thread or not.
-     * Exceptions and Errors thrown during this method
+     * Dont assume cancel() is called before, during or after runLink(), or in
+     * the same thread or not. Exceptions and Errors thrown during this method
      * will be logged, but not rethrown.
      * @param cause the cancellation cause
      */

@@ -34,7 +34,6 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
-import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.swing.AbstractAction;
@@ -56,6 +55,7 @@ import javax.swing.ListCellRenderer;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.Timer;
+import org.apache.logging.log4j.LogManager;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.queryparser.classic.ParseException;
@@ -346,7 +346,7 @@ public class GutenbergPanel {
                 };
                 search.query(query, requestedSubjects, queryLocale, 10000, callback);
             } catch (IOException | ParseException ex) {
-                Bookjar.log.log(Level.SEVERE, "Error querying database: ", ex);
+                LogManager.getLogger().error("error querying database", ex);
             }
             return Collections.emptyList();
         }
@@ -387,7 +387,7 @@ public class GutenbergPanel {
                 Path bookFile = Files.createTempFile("", "");
                 downloads.add(book, book.getURL(), bookFile, book.getExtent(), book.getMimeType());
             } catch (IOException ex) {
-                Bookjar.log.log(Level.SEVERE, "Could not start download", ex);
+                LogManager.getLogger().error("could not start download", ex);
             }
         }
     }

@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.ServiceLoader;
-import java.util.logging.Level;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.DefaultListModel;
@@ -27,6 +26,7 @@ import javax.swing.JList;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
+import org.apache.logging.log4j.LogManager;
 
 /**
  *
@@ -231,12 +231,12 @@ public class DownloadsList<E> implements Observer {
 
         public void actionPerformed(ActionEvent e) {
             if (!Desktop.isDesktopSupported()) {
-                Download.log.info("Desktop unsupported, can't open the downloaded file");
+                LogManager.getLogger().info("desktop unsupported, can't open the downloaded file");
                 return;
             }
             final Desktop desktop = Desktop.getDesktop();
             if (!desktop.isSupported(Desktop.Action.OPEN)) {
-                Download.log.info("Desktop open action unsupported, can't open the downloaded file");
+                LogManager.getLogger().info("desktop open action unsupported, can't open the downloaded file");
                 return;
             }
 
@@ -244,7 +244,7 @@ public class DownloadsList<E> implements Observer {
                 try {
                     Desktop.getDesktop().open(d.download.getDownloadedFile().getParent().toFile());
                 } catch (IOException | NullPointerException ex) {
-                    Download.log.info("Couldn't open parent folder of file " + d.download.getDownloadedFile());
+                    LogManager.getLogger().info("couldn't open parent folder of file " + d.download.getDownloadedFile());
                 }
             }
         }
@@ -347,7 +347,7 @@ public class DownloadsList<E> implements Observer {
                     try {
                         d.download.retry();
                     } catch (IOException ex) {
-                        Download.log.log(Level.SEVERE, "Couldn't start download", ex);
+                        LogManager.getLogger().error("couldn't start download", ex);
                     }
                 }
             }

@@ -21,8 +21,9 @@ import i3.util.Strings;
 import static i3.io.IoUtils.*;
 
 /**
- * Class responsible for creating standardized
- * styleddocuments from various datasources.
+ * Class responsible for creating standardized styleddocuments from various
+ * datasources.
+ *
  * @author Paulo
  */
 public final class HtmlLoader extends BookLoader {

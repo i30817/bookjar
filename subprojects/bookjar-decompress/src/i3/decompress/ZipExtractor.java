@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
+import org.apache.logging.log4j.LogManager;
 
 public final class ZipExtractor extends Extractor {
 
@@ -63,7 +64,10 @@ public final class ZipExtractor extends Extractor {
         ZipEntry header = (ZipEntry) headerObject;
         long time = header.getTime();
         if (time == -1) {
-            Selector.log.severe("The zip file has no modifcation date and you tried to get it or " + "use it for selection - the result is no files added in OR predicates " + "or all files removed in AND predicates!");
+            LogManager.getLogger().error(
+                    "the zip file has no modifcation date and you tried to get it or "
+                    + "use it for selection - the result is no files added in OR predicates "
+                    + "or all files removed in AND predicates!");
             return null;
         }
 
@@ -74,8 +78,10 @@ public final class ZipExtractor extends Extractor {
         ZipEntry header = (ZipEntry) headerObject;
         long size = header.getSize();
         if (size == -1) {
-            Selector.log.severe(
-                    "The zip file has no uncompressed file size  and you tried to get it or " + "use it for selection - the result is no files added in OR predicates " + "or all files removed in AND predicates!");
+            LogManager.getLogger().error(
+                    "the zip file has no uncompressed file size  and you tried to get it or "
+                    + "use it for selection - the result is no files added in OR predicates "
+                    + "or all files removed in AND predicates!");
             return null;
         }
 
@@ -86,8 +92,10 @@ public final class ZipExtractor extends Extractor {
         ZipEntry header = (ZipEntry) headerObject;
         long size = header.getCompressedSize();
         if (size == -1) {
-            Selector.log.severe(
-                    "The zip file has no compressed file size  and you tried to get it or " + "use it for selection - the result is no files added in OR predicates " + "or all files removed in AND predicates!");
+            LogManager.getLogger().error(
+                    "the zip file has no compressed file size  and you tried to get it or "
+                    + "use it for selection - the result is no files added in OR predicates "
+                    + "or all files removed in AND predicates!");
             return null;
         }
 
@@ -99,8 +107,10 @@ public final class ZipExtractor extends Extractor {
         long crc32 = header.getCrc();
 
         if (crc32 == -1) {
-            Selector.log.severe(
-                    "The zip file has no file CRC32  and you tried to get it or " + "use it for selection - the result is no files added in OR predicates!");
+            LogManager.getLogger().error(
+                    "the zip file has no file CRC32  and you tried to get it or "
+                    + "use it for selection - the result is no files added in OR predicates "
+                    + "or all files removed in AND predicates!");
             return null;
         }
         return Long.valueOf(crc32);
