@@ -53,7 +53,8 @@ public final class WriteImageToCache {
         if (hasAlpha && format.equals("jpg")) {
             format = "png";
         }
-        Path cached = IoUtils.getSafeFileSystemFile(imagesDir, key + "." + format);
+        //no extension whatever the format, trust the headers
+        Path cached = IoUtils.getSafeFileSystemFile(imagesDir, key);
         try {
             ImageIO.write(arg, format, cached.toFile());
         } catch (IOException t) {

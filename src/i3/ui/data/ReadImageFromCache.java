@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import javax.imageio.ImageIO;
 import i3.main.Bookjar;
 import i3.io.IoUtils;
+import org.apache.logging.log4j.LogManager;
 
 /**
  *
@@ -28,17 +29,14 @@ public class ReadImageFromCache {
         if (WriteImageToCache.turnedOff) {
             return null;
         }
-        Path cached = IoUtils.getSafeFileSystemFile(imagesDir, key + "." + WriteImageToCache.bestFormat);
+        //no extension for the cache files
+        Path cached = IoUtils.getSafeFileSystemFile(imagesDir, key);
         try {
             if (Files.exists(cached)) {
                 return ImageIO.read(cached.toFile());
             }
-            cached = IoUtils.getSafeFileSystemFile(imagesDir, key + ".png");
-            if (Files.exists(cached)) {
-                return ImageIO.read(cached.toFile());
-            }
         } catch (IOException ex) {
-            ex.printStackTrace();
+            LogManager.getLogger().warn(ex);
         }
         return null;
     }
