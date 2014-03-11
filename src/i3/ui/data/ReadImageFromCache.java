@@ -29,8 +29,11 @@ public class ReadImageFromCache {
         if (WriteImageToCache.turnedOff) {
             return null;
         }
-        //no extension for the cache files
-        Path cached = IoUtils.getSafeFileSystemFile(imagesDir, key);
+        //no extension whatever the format, trust the headers
+        //strip extensions not to confuse filemanagers
+        int last = key.lastIndexOf('.');
+        String imageName = last == -1 ? key : key.substring(0, last);
+        Path cached = IoUtils.getSafeFileSystemFile(imagesDir, imageName);
         try {
             if (Files.exists(cached)) {
                 return ImageIO.read(cached.toFile());

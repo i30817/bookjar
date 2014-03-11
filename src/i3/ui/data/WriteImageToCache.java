@@ -54,7 +54,10 @@ public final class WriteImageToCache {
             format = "png";
         }
         //no extension whatever the format, trust the headers
-        Path cached = IoUtils.getSafeFileSystemFile(imagesDir, key);
+        //strip extensions not to confuse filemanagers
+        int last = key.lastIndexOf('.');
+        String imageName = last == -1 ? key : key.substring(0, last);
+        Path cached = IoUtils.getSafeFileSystemFile(imagesDir, imageName);
         try {
             ImageIO.write(arg, format, cached.toFile());
         } catch (IOException t) {
