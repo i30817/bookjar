@@ -265,7 +265,7 @@ public class LibraryView implements Serializable {
                 list.putImage(entry, img);
                 return;
             }
-            if (Library.libraryNotExists()) {
+            if (Library.libraryNotExists() || entry.isBroken()) {
                 networkPool.execute(new CoverSearchOrRandom<>(name, entry, list, imageWidth, imageHeight));
                 return;
             }
@@ -288,7 +288,7 @@ public class LibraryView implements Serializable {
                     } catch (ExtractionException e) {
                         books.replace(entry.setBroken(true));
                         //TODO: notify about corrupt books
-                        //Trick of Light 
+                        //Trick of Light
                         LogManager.getLogger().error(entry.toString() + " appears to be corrupt", e);
                     } catch (Exception e) {
                         LogManager.getLogger().error("could not get cover image for " + entry.toString(), e);
