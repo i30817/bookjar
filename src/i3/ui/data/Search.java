@@ -32,7 +32,7 @@ public class Search {
     private HttpResponse currentlyDownloading;
     private static volatile int failedDownloading;
     private static final int TIMEOUT = 1000 * 15; //15 seconds
-    private static final int MAXIMUM_DOWNLOAD_FAILURES = 100;
+    private static final int MAXIMUM_DOWNLOAD_FAILURES = 30;
 
     private static class GoogleNet {
 
@@ -110,10 +110,11 @@ public class Search {
                 }
             }
             if (image != null) {
-                return streamCover(image);
+                return streamCover(image.replace("&edge=curl", ""));//lame 'open curl' effect
             } else if (images != null && (image = images.getThumbnail()) != null) {
-                image = image.replace("&zoom=1", "").replace("&edge=curl", "");
-                return streamCover(image);
+                //although some images have a larger version if you remove the
+                //&zoom=1 parameter, sometimes it's not a cover.
+                return streamCover(image.replace("&edge=curl", ""));
             } else if (v.getIndustryIdentifiers() != null) {//try open library
                 for (IndustryIdentifiers id : v.getIndustryIdentifiers()) {
                     if ("ISBN_13".equals(id.getType())) {

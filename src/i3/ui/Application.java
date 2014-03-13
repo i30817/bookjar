@@ -260,6 +260,7 @@ public final class Application implements Serializable {
             return true;
         } catch (IOException e) {
             //do not remove books since they can be repaired
+            bookList.replace(book.setBroken(true));
             LogManager.getLogger().error("fatal error reading " + book, e);
         }
         return false;
