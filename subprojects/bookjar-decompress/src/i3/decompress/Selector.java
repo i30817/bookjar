@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
  *
  * clients can use it like this: selector.selectBySuffix(".rtf",
  * false).selectByModificationDate(LARGER_THAN, someDate); This is an implied
- * or, meaning both kind of archives are to be extraced.
+ * or, meaning both kind of files are to be extraced.
  *
  * On the other hand you can use it like this: selector.selectBySuffix(".rtf",
  * false).limitSelector().selectByModificationDate(LARGER_THAN, someDate); Where
@@ -168,8 +168,8 @@ public final class Selector implements Closeable, Iterable<FileView> {
     }
 
     /**
-     * The selector selected archives will be the only archives selectable in
-     * the future and resets the selection
+     * The selector selected files will be the only files selectable in the
+     * future and resets the selection
      *
      * @return this
      */
@@ -184,8 +184,8 @@ public final class Selector implements Closeable, Iterable<FileView> {
     }
 
     /**
-     * The selector not selected archives will be the only archives selectable
-     * in the future and resets the selection
+     * The selector not selected files will be the only files selectable in the
+     * future and resets the selection
      *
      * @return this
      */
