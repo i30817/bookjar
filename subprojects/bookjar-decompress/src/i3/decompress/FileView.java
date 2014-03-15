@@ -11,6 +11,7 @@ import java.util.Date;
 
 /**
  * A containter of the compressed archive contents
+ *
  * @author i30817
  */
 public final class FileView {
@@ -25,6 +26,7 @@ public final class FileView {
 
     /**
      * Return a InputStream of a File.
+     *
      * @return InputStream
      * @throws IOException if couldn't create the InputStream
      */
@@ -34,6 +36,7 @@ public final class FileView {
 
     /**
      * Writes compressed archive into a OutputStream.
+     *
      * @param OutputStream
      * @throws IOException if couldn't writeInto to outputstream
      */
@@ -43,6 +46,7 @@ public final class FileView {
 
     /**
      * Return the file path of a File.
+     *
      * @return file name, never null.
      */
     public String getFilePath() {
@@ -51,6 +55,7 @@ public final class FileView {
 
     /**
      * Return the file name of a File.
+     *
      * @return file name, never null.
      */
     public String getFileName() {
@@ -59,6 +64,7 @@ public final class FileView {
 
     /**
      * Return the file modification date on a implementation of a kind of header
+     *
      * @param headerObject (subclass header, as Object)
      * @return file modification date, null if unknown.
      */
@@ -68,6 +74,7 @@ public final class FileView {
 
     /**
      * Return the file size on a implementation of a kind of header
+     *
      * @param headerObject (subclass header, as Object)
      * @return file size, null if unknown.
      */
@@ -77,6 +84,7 @@ public final class FileView {
 
     /**
      * Return the compressed file size on a implementation of a kind of header
+     *
      * @param headerObject (subclass header, as Object)
      * @return compressed file size, null if unknown.
      */
@@ -86,6 +94,7 @@ public final class FileView {
 
     /**
      * Return the file CRC32 on a implementation of a kind of header
+     *
      * @param headerObject (subclass header, as Object)
      * @return file CRC32, null if unknown.
      */
@@ -95,6 +104,7 @@ public final class FileView {
 
     /**
      * Return if the file is a directory
+     *
      * @return file is directory
      */
     public boolean isDirectory() {

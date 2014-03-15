@@ -5,12 +5,10 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.NoSuchElementException;
@@ -20,14 +18,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * A selection fluent interface. clients will use it like this:
+ * A selection fluent interface, methods which return 'Selector' (except the
+ * factory) always return 'this' so don't expect the old one to have the
+ * previous value.
  *
- * selector.selectBySuffix(".rtf", false).selectByModificationDate(LARGER_THAN,
- * someDate); This is an implied or, meaning both kind of archives are to be
- * extraced.
+ * clients can use it like this: selector.selectBySuffix(".rtf",
+ * false).selectByModificationDate(LARGER_THAN, someDate); This is an implied
+ * or, meaning both kind of archives are to be extraced.
  *
  * On the other hand you can use it like this: selector.selectBySuffix(".rtf",
- * false).subSelector().selectByModificationDate(LARGER_THAN, someDate); Where
+ * false).limitSelector().selectByModificationDate(LARGER_THAN, someDate); Where
  * the result of the first is filtered.
  *
  * The selectByXXX() methods will not add results if you try to use them on a
@@ -117,7 +117,7 @@ public final class Selector implements Closeable, Iterable<FileView> {
     }
 
     /**
-     * Return if archive is empty
+     * Return if selector is empty (max number of selectable files == 0)
      *
      * @return is empty
      */
@@ -135,7 +135,7 @@ public final class Selector implements Closeable, Iterable<FileView> {
     }
 
     /**
-     * Return the number of files in the archive
+     * Return the number of selectable files
      *
      * @return number of files in the archive
      */
@@ -144,7 +144,7 @@ public final class Selector implements Closeable, Iterable<FileView> {
     }
 
     /**
-     * Clears the selected archives
+     * Clears the selected files
      */
     public void clear() {
         workSet.clear();
@@ -168,34 +168,31 @@ public final class Selector implements Closeable, Iterable<FileView> {
     }
 
     /**
-     * Creates a selector where the selected archives of the current Selector
-     * are the only archives (to be) selectable by the returned Selector
+     * The selector selected archives will be the only archives selectable in
+     * the future and resets the selection
      */
-    public Selector subSelector() {
-        if (workSet.size() == headers.size()) {
-            workSet.clear();
-            return this;
-        } else if (workSet.isEmpty()) {
-            return new Selector(extractor, Collections.EMPTY_LIST);
+    public Selector limitSelector() {
+        if (workSet.isEmpty()) {
+            headers = Collections.EMPTY_LIST;
+        } else if (workSet.size() != headers.size()) {
+            headers.retainAll(workSet);
         }
-        return new Selector(extractor, new ArrayList(workSet));
+        workSet.clear();
+        return this;
     }
 
     /**
-     * Creates a selector where the not selected archives of the current
-     * Selector are the only archives (to be) selectable by the returned
-     * Selector
+     * The selector not selected archives will be the only archives selectable
+     * in the future and resets the selection
      */
-    public Selector inverseSelector() {
-        if (workSet.isEmpty()) {
-            return this;
-        } else if (workSet.size() == headers.size()) {
-            return new Selector(extractor, Collections.EMPTY_LIST);
+    public Selector limitSelectorInverse() {
+        if (workSet.size() == headers.size()) {
+            headers = Collections.EMPTY_LIST;
+        } else if (!workSet.isEmpty()) {
+            headers.removeAll(workSet);
         }
-        //removing in arraylists is painfull
-        LinkedList arr = new LinkedList(headers);
-        arr.removeAll(workSet);
-        return new Selector(extractor, arr);
+        workSet.clear();
+        return this;
     }
 
     /**
@@ -204,9 +201,7 @@ public final class Selector implements Closeable, Iterable<FileView> {
      * @return this
      */
     public Selector selectAll() {
-        for (Object h : headers) {
-            workSet.add(h);
-        }
+        workSet.addAll(headers);
         return this;
     }
 
@@ -420,30 +415,50 @@ public final class Selector implements Closeable, Iterable<FileView> {
      * was called call close() on it input stream given before trying to use the
      * next inputStream.
      *
-     * @return A Iterator/Iterable with the contents of the selected files.
+     * @return A Iterator with the selected files.
      * @throws ConcurrentModificationException if Selector is modified while
      * iterating over the result.
      */
     @Override
-    public ContentsIterator iterator() {
+    public Iterator<FileView> iterator() {
         return new ContentsIterator(workSet.iterator(), workSet.size(), extractor);
     }
 
     /**
-     * As iterator() only the first numberToExtract files specified. WARNING: if
+     * As iterable only the first numberToExtract files specified. WARNING: if
      * FileView.getInputStream() was called call close() on it input stream
      * given before trying to use the next inputStream.
      *
-     * @return A Iterator/Iterable with the contents of the selected files.
+     * @return A Iterable with the first 'numberToExtract' selected files, if
+     * they reach that number.
      * @throws ConcurrentModificationException if Selector is modified while
      * iterating over the result.
      */
-    public ContentsIterator iterator(int numberToExtract) {
+    public Iterable<FileView> iterable(int numberToExtract) {
         int toExtract = Math.max(0, Math.min(numberToExtract, workSet.size()));
         return new ContentsIterator(workSet.iterator(), toExtract, extractor);
     }
 
-    public static final class ContentsIterator implements Iterator<FileView>, Iterable<FileView> {
+    @Override
+    public String toString() {
+        Iterator<FileView> it = iterator();
+        if (!it.hasNext()) {
+            return "[contains " + headers.size() + "]";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("[contains " + headers.size() + " : ");
+        for (;;) {
+            FileView e = it.next();
+            sb.append(e.getFilePath());
+            if (!it.hasNext()) {
+                return sb.append(']').toString();
+            }
+            sb.append(',').append(' ');
+        }
+    }
+
+    static final class ContentsIterator implements Iterator<FileView>, Iterable<FileView> {
 
         private Iterator headerCopy;
         private Extractor extractor;

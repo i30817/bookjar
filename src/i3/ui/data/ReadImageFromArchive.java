@@ -44,18 +44,18 @@ public final class ReadImageFromArchive {
             if (archive.selectedSize() == 0) {
                 return null;
             }
-            //only png, gif etc
-            archive = archive.subSelector();
             regex = "(?:.*rear.*)|(?:.*back.*)";
-            archive.selectByRegex(regex, Pattern.CASE_INSENSITIVE);
-            //not a back cover
-            archive = archive.inverseSelector();
+            //only png, gif etc; and not a back cover
+            archive.limitSelector()
+                    .selectByRegex(regex, Pattern.CASE_INSENSITIVE)
+                    .limitSelectorInverse();
+
             if (archive.isEmpty()) {
                 return null;
             } else {
-                //ordered by least false positives.
+                //things that can be covers by the name, ordered by least false positives.
                 regex = "(?:.*fcover.*)|(?:.*front.*)|(?:.*cover.*)|(?:^fc\\..*)";
-                archive.selectByRegexPath(regex, Pattern.CASE_INSENSITIVE);
+                archive.selectByRegex(regex, Pattern.CASE_INSENSITIVE);
                 imageFileView = archive.getSelected();
             }
 
