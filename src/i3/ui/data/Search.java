@@ -90,12 +90,13 @@ public class Search {
                     //.setPrettyPrint(true)
                     .setFields("items(volumeInfo(imageLinks/*,industryIdentifiers/*))")
                     .execute().getItems();
+            System.out.println(book + " : " + authorsQuery + "\n" + vols);
             if (vols == null) {
                 return null;
             }
             VolumeInfo v = vols.get(0).getVolumeInfo();
             ImageLinks images = v.getImageLinks();
-//            System.out.println(v);
+//            System.out.prinln(v);
             String image = null;
             if (images != null) {
                 image = images.getMedium();
