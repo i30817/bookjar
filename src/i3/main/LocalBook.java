@@ -258,10 +258,10 @@ public final class LocalBook implements Book, Serializable {
 
     private static String authorPreprocessing(String authors) {
         //remove author name abreviations
-//        authors = authors.replaceAll("(?:\\s|^)\\p{Lu}(?:\\s|$)", " ");
+        authors = authors.replaceAll("(?:\\s|^)\\p{Lu}(?:\\s|$)", " ");
         //other extranous things - removing digits
         //doesn't cause false positives for name.
-        return authors.replaceAll("\\p{Digit}", "").trim();
+        return authors.replaceAll("\\p{Digit}", "");
     }
 
     /**
@@ -276,8 +276,8 @@ public final class LocalBook implements Book, Serializable {
         bookName = bookName.replaceAll("(?:\\[.*?\\])|(?:\\{.*?\\})|(?:\\(.*?\\))", "");
         //strip leading 0s
         bookName = bookName.replaceAll("(?:\\s|^)0+([^0])", " $1");
-        //remove space equivalents before splitting
-        bookName = bookName.replaceAll("(?:_|,)", " ");
+        //remove space/abrev. equivalents before splitting
+        bookName = bookName.replaceAll("(?:_|\\.|,)", " ");
         //split
         String authors = "";
         int authorLastIndex = bookName.indexOf("- ");

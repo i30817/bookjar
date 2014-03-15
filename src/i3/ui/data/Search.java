@@ -90,7 +90,7 @@ public class Search {
                     //.setPrettyPrint(true)
                     .setFields("items(volumeInfo(imageLinks/*,industryIdentifiers/*))")
                     .execute().getItems();
-            System.out.println(book + " : " + authorsQuery + "\n" + vols);
+//            System.out.println(book + " : " + authorsQuery + "\n" + vols);
             if (vols == null) {
                 return null;
             }
@@ -153,7 +153,9 @@ public class Search {
     private String createQuery(String[] authors) {
         String authorsQuery = "";
         for (String author : authors) {
-            authorsQuery += " inauthor:\"" + author + "\"";
+            for (String name : author.split("\\s+")) {
+                authorsQuery += " inauthor:\"" + name.trim() + "\"";
+            }
         }
         return authorsQuery;
     }
