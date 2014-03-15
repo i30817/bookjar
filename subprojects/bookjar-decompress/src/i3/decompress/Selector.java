@@ -170,6 +170,8 @@ public final class Selector implements Closeable, Iterable<FileView> {
     /**
      * The selector selected archives will be the only archives selectable in
      * the future and resets the selection
+     *
+     * @return this
      */
     public Selector limitSelector() {
         if (workSet.isEmpty()) {
@@ -184,6 +186,8 @@ public final class Selector implements Closeable, Iterable<FileView> {
     /**
      * The selector not selected archives will be the only archives selectable
      * in the future and resets the selection
+     *
+     * @return this
      */
     public Selector limitSelectorInverse() {
         if (workSet.size() == headers.size()) {
