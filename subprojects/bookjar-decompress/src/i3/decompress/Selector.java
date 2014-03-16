@@ -19,19 +19,28 @@ import java.util.regex.Pattern;
 
 /**
  * A selection fluent interface, methods which return 'Selector' (except the
- * factory) always return 'this' so don't expect the old one to have the
- * previous value.
+ * factory) always return 'this'.
  *
- * clients can use it like this: selector.selectBySuffix(".rtf",
- * false).selectByModificationDate(LARGER_THAN, someDate); This is an implied
- * or, meaning both kind of files are to be extraced.
+ * clients can use it like this:
  *
- * On the other hand you can use it like this: selector.selectBySuffix(".rtf",
- * false).limitSelector().selectByModificationDate(LARGER_THAN, someDate); Where
- * the result of the first is filtered.
+ * <b>selector.selectBySuffix(".rtf", false).select(Content.CRC32,
+ * Inequalities.equal(crc));</b>
  *
- * The selectByXXX() methods will not add results if you try to use them on a
- * file where XXX is not supported. A warning will be raised in these cases.
+ * This has a implied or, meaning both all rtf files and files with the crc are
+ * selected.
+ *
+ * <b>selector.selectBySuffix(".rtf", false).limit().select(Content.CRC32,
+ * Inequalities.equal(crc));</b>
+ *
+ * This is requires that the files to be extracted be a rtf, and have the crc.
+ *
+ * <b>selector.selectBySuffix(".rtf", false).invert().select(Content.CRC32,
+ * Inequalities.equal(crc));</b>
+ *
+ * This requires that the files to be extracted are not a rtf and have the crc.
+ *
+ * The selectXXX() methods will not add results if you try to use them on a file
+ * where XXX is not supported. A warning will be logged in these cases.
  *
  * To order the results use the orderBy(Ascending|Descending)(Comparator c).
  *
@@ -171,9 +180,12 @@ public final class Selector implements Closeable, Iterable<FileView> {
      * The selector selected files will be the only files selectable in the
      * future and resets the selection
      *
+     * It's currently not possible to reset discarded files by this method in
+     * the same selector
+     *
      * @return this
      */
-    public Selector limitSelector() {
+    public Selector limit() {
         if (workSet.isEmpty()) {
             headers = Collections.EMPTY_LIST;
         } else if (workSet.size() != headers.size()) {
@@ -187,9 +199,12 @@ public final class Selector implements Closeable, Iterable<FileView> {
      * The selector not selected files will be the only files selectable in the
      * future and resets the selection
      *
+     * It's currently not possible to reset discarded files by this method in
+     * the same selector
+     *
      * @return this
      */
-    public Selector limitSelectorInverse() {
+    public Selector invert() {
         if (workSet.size() == headers.size()) {
             headers = Collections.EMPTY_LIST;
         } else if (!workSet.isEmpty()) {
@@ -200,7 +215,7 @@ public final class Selector implements Closeable, Iterable<FileView> {
     }
 
     /**
-     * Tries to reserve for extraction all files
+     * Tries to reserve for extraction all selectable files
      *
      * @return this
      */
@@ -425,22 +440,7 @@ public final class Selector implements Closeable, Iterable<FileView> {
      */
     @Override
     public Iterator<FileView> iterator() {
-        return new ContentsIterator(workSet.iterator(), workSet.size(), extractor);
-    }
-
-    /**
-     * As iterable only the first numberToExtract files specified. WARNING: if
-     * FileView.getInputStream() was called call close() on it input stream
-     * given before trying to use the next inputStream.
-     *
-     * @return A Iterable with the first 'numberToExtract' selected files, if
-     * they reach that number.
-     * @throws ConcurrentModificationException if Selector is modified while
-     * iterating over the result.
-     */
-    public Iterable<FileView> iterable(int numberToExtract) {
-        int toExtract = Math.max(0, Math.min(numberToExtract, workSet.size()));
-        return new ContentsIterator(workSet.iterator(), toExtract, extractor);
+        return new ContentsIterator(workSet.iterator(), extractor);
     }
 
     @Override
@@ -462,41 +462,29 @@ public final class Selector implements Closeable, Iterable<FileView> {
         }
     }
 
-    static final class ContentsIterator implements Iterator<FileView>, Iterable<FileView> {
+    private static final class ContentsIterator implements Iterator<FileView> {
 
-        private Iterator headerCopy;
+        private Iterator it;
         private Extractor extractor;
-        private int size, index;
 
-        private ContentsIterator(Iterator headerCopy, int size, Extractor extractor) {
-            this.headerCopy = headerCopy;
-            this.size = size;
+        private ContentsIterator(Iterator it, Extractor extractor) {
+            this.it = it;
             this.extractor = extractor;
         }
 
         @Override
-        public Iterator<FileView> iterator() {
-            return this;
-        }
-
-        @Override
         public boolean hasNext() {
-            return index < size;
+            return it.hasNext();
         }
 
         @Override
         public FileView next() {
-            if (hasNext()) {
-                index++;
-                return new FileView(headerCopy.next(), extractor);
-            } else {
-                throw new NoSuchElementException();
-            }
+            return new FileView(it.next(), extractor);
         }
 
         @Override
         public void remove() {
-            headerCopy.remove();
+            it.remove();
         }
     }
 }

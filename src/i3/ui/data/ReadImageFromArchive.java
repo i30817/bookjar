@@ -46,9 +46,7 @@ public final class ReadImageFromArchive {
             }
             regex = "(?:.*rear.*)|(?:.*back.*)";
             //only png, gif etc; and not a back cover
-            archive.limitSelector()
-                    .selectByRegex(regex, Pattern.CASE_INSENSITIVE)
-                    .limitSelectorInverse();
+            archive.limit().selectByRegex(regex, Pattern.CASE_INSENSITIVE).invert();
 
             if (archive.isEmpty()) {
                 return null;
