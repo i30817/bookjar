@@ -51,7 +51,7 @@ public final class ReadImageFromArchive {
             if (archive.isEmpty()) {
                 return null;
             } else {
-                //things that can be covers by the name, ordered by least false positives.
+                //things that can be covers by the name
                 regex = "(?:.*fcover.*)|(?:.*front.*)|(?:.*cover.*)|(?:^fc\\..*)";
                 archive.selectByRegex(regex, Pattern.CASE_INSENSITIVE);
                 imageFileView = archive.getSelected();
