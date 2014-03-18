@@ -1,10 +1,12 @@
 package i3.ui;
 
-import javax.swing.Action;
-import javax.swing.KeyStroke;
 import i3.swing.Bind;
 import i3.swing.dynamic.DynamicAction;
 import i3.swing.dynamic.LazyObjectCall;
+import java.awt.Font;
+import javax.swing.Action;
+import javax.swing.KeyStroke;
+import javax.swing.UIManager;
 
 /**
  * Used on Bind and ShortcutOptions to link actions to descriptions and
@@ -13,30 +15,6 @@ import i3.swing.dynamic.LazyObjectCall;
 public enum Key implements Bind.Binding {
 
     //these actions target needs to be late binded due to the way enum deserialization works.
-    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
-//these actions target needs to be late binded due to the way enum deserialization works.
-    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
-//these actions target needs to be late binded due to the way enum deserialization works.
-    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
-//these actions target needs to be late binded due to the way enum deserialization works.
-    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
-//these actions target needs to be late binded due to the way enum deserialization works.
-    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
-//these actions target needs to be late binded due to the way enum deserialization works.
-    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
-//these actions target needs to be late binded due to the way enum deserialization works.
-    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
-//these actions target needs to be late binded due to the way enum deserialization works.
-    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
-//these actions target needs to be late binded due to the way enum deserialization works.
-    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
-//these actions target needs to be late binded due to the way enum deserialization works.
-    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
-//these actions target needs to be late binded due to the way enum deserialization works.
-    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
-//these actions target needs to be late binded due to the way enum deserialization works.
-    //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
-//these actions target needs to be late binded due to the way enum deserialization works.
     //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
 //these actions target needs to be late binded due to the way enum deserialization works.
     //actions with globally bindable shortcuts (have a keystroke in addDefaultShortcuts)
@@ -53,23 +31,49 @@ public enum Key implements Bind.Binding {
     Options(DynamicAction.createAction("Options", "Show options dialog", LazyApp.instance, "createAndShowOptions"), "pressed C"),
     Increase_font(DynamicAction.createAction("Plus font size", "Increase font", LazyApp.instance, "increaseFontSize"), "control PLUS"),
     Decrease_font(DynamicAction.createAction("Minus font size", "Decrease font", LazyApp.instance, "decreaseFontSize"), "control MINUS"),
-    Undo(DynamicAction.createAction("Undo move", "Return to a previously clicked link", LazyApp.instance, "undo"), "pressed BACK_SPACE"),
-    Redo(DynamicAction.createAction("Redo move", "Return to the destination of a clicked link after a undo", LazyApp.instance, "redo"), "shift BACK_SPACE"),
+    Undo_move(DynamicAction.createAction(NAME.UNDO, "Return to a previously clicked link", LazyApp.instance, "undo"), "pressed BACK_SPACE"),
+    Redo_move(DynamicAction.createAction(NAME.REDO, "Return to the destination of a clicked link after a undo", LazyApp.instance, "redo"), "shift BACK_SPACE"),
     Toggle_bottom_panel(DynamicAction.createAction("Show/Hide panel", "Show bottom bar", LazyApp.instance, "toggleBottomBar"), "pressed M"),
     Show_find(DynamicAction.createAction("Find", "Find contextual shortcut", LazyApp.instance, "showFind"), "control F"),
     Remove_books(DynamicAction.createAction("Remove books", "Remove selected books (on the added menu list)", LazyApp.instance, "removeSelectedBooks"), "pressed DELETE"),
     Open_folders(DynamicAction.createAction("Open directory", "Open selected books folders (on the added menu list)", LazyApp.instance, "openSelectedBookFolders"), "pressed O"),
     Browse_libraryThing(DynamicAction.createAction("LibraryThing book page", "Browse the selected books pages on LibraryThing", LazyApp.instance, "linkLibraryThing"), "pressed ADD"),
     //actions with no global shortcut (there may be a local one)
-    Popup_percent(DynamicAction.createEventAction("[ \u25b2 ]", null, LazyApp.instance, "showPopup"), null),
+    Popup_percent(DynamicAction.createEventAction(NAME.POPUP, null, LazyApp.instance, "showPopup"), null),
     Find(DynamicAction.createAction("Find", LazyApp.instance, "find"), null),
     Find_previous(DynamicAction.createAction("Previous", LazyApp.instance, "previous"), null),
-    Hide_find(DynamicAction.createAction(" \u2297 ", LazyApp.instance, "hideFind"), null),
+    Hide_find(DynamicAction.createAction(NAME.CLOSE, LazyApp.instance, "hideFind"), null),
     Select_book(DynamicAction.createAction("Read book", LazyApp.instance, "bookSelected"), null),
     Sort_library(DynamicAction.createAction("Sort library", LazyApp.instance, "sortLibrary"), null),
     //don't rebing the original actions directly because they need the right name to display (and so do the original)
-    Close_gutenberg(DynamicAction.createEventAction(" \u2297 ", null, Toggle_gutenberg.getAction(), "actionPerformed"), null),
-    Close_library(DynamicAction.createEventAction(" \u2297 ", null, Toggle_library.getAction(), "actionPerformed"), null);
+    Close_gutenberg(DynamicAction.createEventAction(NAME.CLOSE, null, Toggle_gutenberg.getAction(), "actionPerformed"), null),
+    Close_library(DynamicAction.createEventAction(NAME.CLOSE, null, Toggle_library.getAction(), "actionPerformed"), null);
+
+    private static class NAME {
+
+        static final String POPUP = "[ \u25B2 ]";//▲
+        static final String UNDO = "[ \u25C0 ]";//◀
+        static final String REDO = "[ \u25B6 ]";//▶
+        static final String CLOSE = " \u25CF ";//●
+    }
+    final static Font EMBEDDED_FONT;
+
+    static {
+        try {
+            Font defaultFont = UIManager.getDefaults().getFont("Button.font");
+            EMBEDDED_FONT = Font.createFont(java.awt.Font.TRUETYPE_FONT,
+                    //fontforge cutdown version of gpl2 font from
+                    //http://savannah.gnu.org/projects/freefont/
+                    //which supports the special chars above
+                    Key.class.getResourceAsStream("bookjar.otf")
+            ).deriveFont(defaultFont == null ? 20F : defaultFont.getSize2D() + 5F);
+            //unfortunately there is no way to bind a font to the action autoconfigure,
+            //since components follow the 'hollywood principle' when configurating
+            //from actions. Add setFont calls for all the components that need this font
+        } catch (Exception ex) {
+            throw new AssertionError(ex);
+        }
+    }
 
     private Key(Action action, String defaultKeystroke) {
         this.action = action;
@@ -95,6 +99,16 @@ public enum Key implements Bind.Binding {
 
     @Override
     public String toString() {
+        //if one of these, use the action name since
+        //the names may be undisplayable on other fonts
+        if (this == Popup_percent
+                || this == Redo_move
+                || this == Undo_move
+                || this == Hide_find
+                || this == Close_gutenberg
+                || this == Close_library) {
+            return this.name().replaceAll("_", " ");
+        }
         Object v = action.getValue(Action.NAME);
         return (String) (v == null ? "(null)" : v);
     }

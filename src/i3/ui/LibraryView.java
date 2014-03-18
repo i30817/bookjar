@@ -80,6 +80,7 @@ public class LibraryView implements Serializable {
             FlowPanelBuilder builder = new FlowPanelBuilder();
             builder.addEscapeAction(Key.Toggle_library.getAction());
             JButton close = new JButton(Key.Close_library.getAction());
+            close.setFont(Key.EMBEDDED_FONT);
             search = new JTextField();
             final String normalPrompt = "Search added books (use dir:\"name\" to search inside a directory)";
             PromptSupport.setForeground(SystemColor.textInactiveText, search);

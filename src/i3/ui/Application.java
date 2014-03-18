@@ -64,9 +64,9 @@ public final class Application implements Serializable {
     private transient GlassPane glass;
     private transient DefaultUndoManager undoRedo;
     private transient JPopupMenu popup;
-    private transient LabelButton percentageButton;
-    private transient LabelButton undoButton;
-    private transient LabelButton redoButton;
+    private transient JButton percentageButton;
+    private transient JButton undoButton;
+    private transient JButton redoButton;
 
     private void writeObject(java.io.ObjectOutputStream output) throws IOException {
         saveCurrentBookIndex();
@@ -105,7 +105,9 @@ public final class Application implements Serializable {
 
         FlowPanelBuilder flowFactory = new FlowPanelBuilder(searchPane);
         flowFactory.addEscapeAction(Key.Hide_find.getAction());
-        flowFactory.add(new JButton(Key.Hide_find.getAction()), FlowPanelBuilder.SizeConfig.PreferredSize);
+        JButton closeFind = new JButton(Key.Hide_find.getAction());
+        closeFind.setFont(Key.EMBEDDED_FONT);
+        flowFactory.add(closeFind, FlowPanelBuilder.SizeConfig.PreferredSize);
         flowFactory.add(searchText, FlowPanelBuilder.SizeConfig.FillSize);
         flowFactory.add(new JButton(Key.Find.getAction()), FlowPanelBuilder.SizeConfig.PreferredSize);
         flowFactory.add(new JButton(Key.Find_previous.getAction()), FlowPanelBuilder.SizeConfig.PreferredSize);
@@ -113,11 +115,11 @@ public final class Application implements Serializable {
         undoRedo = new DefaultUndoManager();
         popup = new JPopupMenu();
         percentageButton = new LabelButton(Key.Popup_percent.getAction());
-        undoButton = new LabelButton(Key.Undo.getAction());
-        redoButton = new LabelButton(Key.Redo.getAction());
-        //override the normal action name to be symbolic here (textual in shortcuts)
-        undoButton.setText("[ \u25c0 ]");
-        redoButton.setText("[ \u25b6 ]");
+        undoButton = new LabelButton(Key.Undo_move.getAction());
+        redoButton = new LabelButton(Key.Redo_move.getAction());
+        percentageButton.setFont(Key.EMBEDDED_FONT);
+        undoButton.setFont(Key.EMBEDDED_FONT);
+        redoButton.setFont(Key.EMBEDDED_FONT);
         //substance is stubborn (empty border will do nothing)
         percentageButton.putClientProperty("substancelaf.buttonnominsize", true);
         undoButton.putClientProperty("substancelaf.buttonnominsize", true);
@@ -154,10 +156,6 @@ public final class Application implements Serializable {
         mainButton.setAction(Key.Move_forward.getAction());
         JButton options = new JButton(Key.Options.getAction());
 
-        Font font = new java.awt.Font("Monospaced", java.awt.Font.BOLD, percentageButton.getFont().getSize() + 2);
-        percentageButton.setFont(font);
-        undoButton.setFont(font);
-        redoButton.setFont(font);
         undoButton.setEnabled(false);
         redoButton.setEnabled(false);
         clock = new ClockField(ClockField.HH_MM);

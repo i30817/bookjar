@@ -111,6 +111,7 @@ public class GutenbergPanel {
             FlowPanelBuilder f = new FlowPanelBuilder();
             f.addEscapeAction(Key.Toggle_gutenberg.getAction());
             JButton close = new JButton(Key.Close_gutenberg.getAction());
+            close.setFont(Key.EMBEDDED_FONT);
             f.add(close, FlowPanelBuilder.SizeConfig.FillSize);
             PromptSupport.setPrompt("Search and download ebooks in Project Gutenberg (use t:word or t:\"words\" to search topics)", searchText);
             PromptSupport.setForeground(SystemColor.textInactiveText, searchText);
