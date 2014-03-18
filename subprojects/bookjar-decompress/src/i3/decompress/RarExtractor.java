@@ -115,9 +115,9 @@ public final class RarExtractor extends Extractor {
         }
         //in rar 5.00 the inner separator is supposed to be '/'
         //http://www.rarlab.com/technote.htm#filehead (scroll down to name)
-        //however this seems a documentation bug. Tests on wine and junrar
-        //running on windows jre show '\' like on linux.
-        //rar directories don't have trailing '\'
+        //however, junrar doesn't read that format (throws a exception)
+        //the older version 4.2 seems to use '\' for both windows and linux
+        //(tested with wine, winrar, linux rar and both windows and linux jre)
         return name.substring(name.lastIndexOf('\\') + 1);
     }
 
