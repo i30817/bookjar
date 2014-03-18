@@ -4,6 +4,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Path;
 import java.util.Date;
 import java.util.List;
 
@@ -103,4 +104,11 @@ public abstract class Extractor implements Closeable {
      * @return file is directory
      */
     public abstract boolean isDirectory(Object headerObject);
+
+    /**
+     * The archive that this extractor operates on.
+     *
+     * @return a path
+     */
+    public abstract Path getArchive();
 }

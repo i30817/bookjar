@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -54,10 +55,20 @@ public final class ZipExtractor extends Extractor {
     }
 
     public String getFileName(Object headerObject) {
+        //in zip the inner separator is always '/'
+        //zip directories might have trailing '/'
         ZipEntry header = (ZipEntry) headerObject;
         String name = header.getName();
-        //in zip the inner separator is always '\'
-        return name.substring(name.lastIndexOf('\\') + 1);
+        int index;
+        //strip last '/' for dirs... if you try to read a unix zip with filesystem
+        //root, there might be a empty string returned...
+        if (header.isDirectory() && name.endsWith("/")) {
+            index = name.lastIndexOf('/', name.length() - 2) + 1;
+            return name.substring(index, name.length() - 2);
+        } else {
+            index = name.lastIndexOf('/') + 1;
+            return name.substring(index);
+        }
     }
 
     public Date getModificationDate(Object headerObject) {
@@ -119,5 +130,10 @@ public final class ZipExtractor extends Extractor {
     public boolean isDirectory(Object headerObject) {
         ZipEntry header = (ZipEntry) headerObject;
         return header.isDirectory();
+    }
+
+    @Override
+    public Path getArchive() {
+        return Paths.get(zipArchive.getName());
     }
 }

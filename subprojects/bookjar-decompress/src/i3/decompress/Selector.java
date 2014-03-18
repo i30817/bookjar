@@ -1,10 +1,14 @@
 package i3.decompress;
 
 import i3.io.IoUtils;
+import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -445,21 +449,56 @@ public final class Selector implements Closeable, Iterable<FileView> {
 
     @Override
     public String toString() {
-        Iterator<FileView> it = iterator();
-        if (!it.hasNext()) {
-            return "[contains " + headers.size() + "]";
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("[contains " + headers.size() + " : ");
-        for (;;) {
-            FileView e = it.next();
-            sb.append(e.getFilePath());
-            if (!it.hasNext()) {
-                return sb.append(']').toString();
+        ArrayList notSelected = new ArrayList(headers.size());
+        int maxName = 0, maxPath = 0;
+        for (Object fileheader : headers) {
+            if (!workSet.contains(fileheader)) {
+                notSelected.add(fileheader);
             }
-            sb.append(',').append(' ');
+            FileView v = new FileView(fileheader, extractor);
+            String name = v.getFileName();
+            int size = name.length();
+            maxName = maxName < size ? size : maxName;
+            size = v.getFilePath().length();
+            maxPath = maxPath < size ? size : maxPath;
         }
+        String body = "| Y |  %c  | %-" + maxName + "s | %-" + maxPath + "s |%n";
+        //extra is the fixed chars from start to %n
+        int seperatorSize = maxName + maxPath + 17;
+        String body2 = "| N |  %c  | %-" + maxName + "s | %-" + maxPath + "s |%n";
+
+        ByteArrayOutputStream out;
+        try (PrintStream p = new PrintStream(out = new ByteArrayOutputStream(1024), false, "UTF-8")) {
+            String filename = extractor.getArchive().toString();
+            printfTableSeperator(p, filename.length() + 4);
+            p.printf("| %s |%n", filename);
+            printfTableSeperator(p, filename.length() + 4);
+            p.printf("| ∈ | F/D | %-" + maxName + "s | %-" + maxPath + "s |%n", "Name", "Path");
+            printfTableSeperator(p, seperatorSize);
+            for (Object fileheader : workSet) {
+                FileView v = new FileView(fileheader, extractor);
+                p.printf(body, v.isDirectory() ? 'D' : 'F', v.getFileName(), v.getFilePath());
+
+            }
+            for (Object fileheader : notSelected) {
+                FileView v = new FileView(fileheader, extractor);
+                p.printf(body2, v.isDirectory() ? 'D' : 'F', v.getFileName(), v.getFilePath());
+            }
+            printfTableSeperator(p, seperatorSize);
+            p.flush();
+            return out.toString("UTF-8");
+        } catch (UnsupportedEncodingException ex) {
+            throw new AssertionError(ex);
+        }
+    }
+
+    private void printfTableSeperator(final PrintStream p, int lineSize) {
+        lineSize -= 2; //for the '+'
+        p.printf("+");
+        for (int i = 0; i < lineSize; i++) {
+            p.print("-");
+        }
+        p.printf("+%n");
     }
 
     private static final class ContentsIterator implements Iterator<FileView> {

@@ -2,9 +2,9 @@ package i3.decompress;
 
 import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
+import com.github.junrar.impl.FileVolume;
 import com.github.junrar.rarfile.FileHeader;
 import i3.io.IoUtils;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
@@ -64,12 +64,6 @@ public final class RarExtractor extends Extractor {
     }
 
     public RarExtractor(Path fileToExtract) throws RarException, IOException {
-
-        File f = fileToExtract.toFile();
-        if (f == null) {
-            throw new NullPointerException();
-        }
-
         this.rarArchive = new Archive(fileToExtract.toFile());
         this.nextIndex = new AtomicInteger();
         this.threadPool = Executors.newSingleThreadExecutor(IoUtils.createThreadFactory(true, "UnrarExtractAux"));
@@ -119,7 +113,11 @@ public final class RarExtractor extends Extractor {
         } else {
             name = rarHeader.getFileNameString();
         }
-        //in rar the inner separator is always '\'
+        //in rar 5.00 the inner separator is supposed to be '/'
+        //http://www.rarlab.com/technote.htm#filehead (scroll down to name)
+        //however this seems a documentation bug. Tests on wine and junrar
+        //running on windows jre show '\' like on linux.
+        //rar directories don't have trailing '\'
         return name.substring(name.lastIndexOf('\\') + 1);
     }
 
@@ -147,6 +145,11 @@ public final class RarExtractor extends Extractor {
     public boolean isDirectory(Object headerObject) {
         FileHeader rarHeader = (FileHeader) headerObject;
         return rarHeader.isDirectory();
+    }
+
+    @Override
+    public Path getArchive() {
+        return ((FileVolume) rarArchive.getVolume()).getFile().toPath();
     }
 
     public void close() throws IOException {
