@@ -15,7 +15,7 @@ import javax.swing.UIManager;
 public enum Key implements Bind.Binding {
 
     /**
-     * Actions with global shortcuts (have a keystroke). Will be used both as
+     * Keys with global shortcuts (have a keystroke). Will be used both as
      * bindings and action containers
      */
     Toggle_fullscreen(
@@ -117,8 +117,8 @@ public enum Key implements Bind.Binding {
                     "Browse the selected books pages on LibraryThing",
                     App.app, "linkLibraryThing"), "pressed ADD"),
     /**
-     * Actions with no global shortcut (there may be a local one). These will
-     * not be used as bindings, but just as a action container.
+     * Keys with no global shortcut (there may be a local one). These will not
+     * be used as bindings, but just as a action container.
      */
     Popup_percent(
             DynamicAction.createEventAction(
@@ -145,17 +145,16 @@ public enum Key implements Bind.Binding {
             DynamicAction.createAction(
                     " \u25CF ",//●
                     App.app, "hideFind"), null),
-    //don't rebing the original actions directly because they need the right name to display (and so do the original)
     Close_gutenberg(
-            DynamicAction.createEventAction(
+            DynamicAction.createAction(
                     " \u25CF ",//●
                     null,
-                    Toggle_gutenberg.getAction(), "actionPerformed"), null),
+                    App.app, "toggleGutenbergList"), null),
     Close_library(
             DynamicAction.createEventAction(
                     " \u25CF ",//●
                     null,
-                    Toggle_library.getAction(), "actionPerformed"), null);
+                    App.app, "toggleList"), null);
 
     private static class App implements LazyObjectCall {
 
