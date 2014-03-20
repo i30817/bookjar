@@ -201,9 +201,11 @@ public enum Key implements Bind.Binding {
 
     private final transient KeyStroke keyStroke;
     private final transient Action action;
-    //unfortunately there is no way to bind a font to the action autoconfigure,
-    //since components follow the 'hollywood principle' when configurating
-    //from actions. Add setFont calls for all the components that need this font
+    /**
+     * unfortunately there is no way to bind a font to the action configure,
+     * since components follow the 'hollywood principle when configurating from
+     * actions. Add setFont calls for all the components that need this font
+     */
     final static Font EMBEDDED_FONT;
 
     static {
