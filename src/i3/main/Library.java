@@ -557,7 +557,7 @@ public final class Library implements Externalizable {
         }
     }
 
-    private static class BooksAndWatcherCollector extends FileVisitors.FilesTransformer {
+    private static class BooksAndWatcherCollector extends FileVisitors.FilesTransformer<LocalBook> {
 
         private final Path library;
         public final WatchService watchTheLib;

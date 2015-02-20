@@ -141,19 +141,15 @@ public class GutenbergDownloadView extends DownloadView<GutenbergBook> {
         //might have returned a 'old' book with the same name but different path (user moved it maybe)
         fileToRead = book.getAbsoluteFile();
 
-        if (Files.exists(fileToRead)) {//already exists, do nothing
-            Application.app.toggleGutenbergList();
-            Application.app.read(book);
-        } else {
-            //move to library dir
-            try {
+        try {
+            if (!Files.exists(fileToRead)) {//move to library dir
                 Files.createDirectories(gutenbergDir);
                 Files.move(state.getDownloadedFile(), fileToRead, StandardCopyOption.REPLACE_EXISTING);
-                Application.app.toggleGutenbergList();
-                Application.app.read(book);
-            } catch (IOException ex) {
-                LogManager.getLogger().error("could not move file to library directory", ex);
             }
+            Application.app.toggleGutenbergList();
+            Application.app.read(book);
+        } catch (IOException ex) {
+            LogManager.getLogger().error("could not move file to library directory", ex);
         }
     }
 
