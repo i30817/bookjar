@@ -151,7 +151,7 @@ public enum Key implements Bind.Binding {
                     null,
                     App.app, "toggleGutenbergList"), null),
     Close_library(
-            DynamicAction.createEventAction(
+            DynamicAction.createAction(
                     " \u25CF ",//●
                     null,
                     App.app, "toggleList"), null);
