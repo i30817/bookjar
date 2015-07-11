@@ -11,7 +11,7 @@
 
 #$1 is the major-minor version;
 #ignore if tag already exists otherwise create and push it
-( git tag | grep -q "$1" ) || ( git tag -a $1 -m "release $1"; git push origin $1 )
+( git tag | grep -Fxq "$1" ) || ( git tag -a $1 -m "release $1"; git push origin $1 )
 
 
 #TODO use gitchangelog when it can generate debian/changelogs

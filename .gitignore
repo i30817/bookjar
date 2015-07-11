@@ -13,6 +13,8 @@
 /nbproject/private/
 /lib/*
 !/lib/nblibraries.properties
+!/lib/CopyLibs/
+!/lib/CopyLibs/org-netbeans-modules-java-j2seproject-copylibstask.jar
 /debian/changelog
 /debian/bookjar
 /debian/files

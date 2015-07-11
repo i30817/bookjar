@@ -23,13 +23,16 @@
         <ivy:retrieve symlink="true"/>
     </target>
 
-    <!-- but if we are doing the clean, delete everything on the libs dir (except the library list file) -->
+    <!-- but if we are doing the clean, delete everything on the libs dir 
+    (except the library list file and the netbeans ant lib, which isn't on maven) -->
     <target name="-post-clean" unless="startedOnPPA">
         <delete includeemptydirs="true">
             <fileset dir="${basedir}/lib">
+                <include name="**/*"/>
                 <exclude name="nblibraries.properties"/>
+                <exclude name="CopyLibs/org-netbeans-modules-java-j2seproject-copylibstask.jar"/>
             </fileset>
-        </delete> 
+        </delete>
     </target>
 
     <!--used in the rules file to build on the ppa, guard against using ivy-->
@@ -52,15 +55,8 @@
     <condition property="canBuildDeb">
         <os family="unix" />
     </condition>
-    <target name="upload" if="canBuildDeb" depends="clean">
-        <!--delete every lib except the copylibs one, let ivy:retrieve fetch them from the repositories (local first) -->
-        <delete includeemptydirs="true">
-            <fileset dir="lib">
-                <include name="**/*"/>
-                <exclude name="nblibraries.properties"/>
-                <exclude name="copylibstask.jar"/>
-            </fileset>
-        </delete>
+    <target name="upload" if="canBuildDeb" depends="-post-clean">
+        <!--after delete -->
         <!--only want jars and real files not symlinks-->
         <ivy:retrieve type="jar"/>
 
