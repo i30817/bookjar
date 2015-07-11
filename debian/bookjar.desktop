@@ -10,4 +10,4 @@ Comment=Read a book!
 Icon=/usr/share/icons/bookjar.png
 Terminal=false
 Type=Application
-URL=http://code.google.com/p/bookjar/
+URL=https://github.com/i30817/bookjar
