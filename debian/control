@@ -8,7 +8,7 @@ Standards-Version: 3.9.6
 Package: bookjar
 Architecture: any
 Depends: default-jre, jarwrapper (>=0.40~), ${misc:Depends}
-Homepage: http://code.google.com/p/bookjar/
+Homepage: https://github.com/i30817/bookjar
 Description: java book reader
  Reads html, text and rtf files (or zipped variants).
  Has a project gutenberg book downloader
