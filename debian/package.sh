@@ -10,8 +10,9 @@
 # https://github.com/vaab/gitchangelog/blob/master/gitchangelog.rc.reference
 
 #$1 is the major-minor version;
-#ignore if tag already exists otherwise create a release commit and set the tag
-( git tag | grep -q "$1" ) || ( git tag -a $1 -m "release $1" )
+#ignore if tag already exists otherwise create and push it
+( git tag | grep -q "$1" ) || ( git tag -a $1 -m "release $1"; git push origin $1 )
+
 
 #TODO use gitchangelog when it can generate debian/changelogs
 LAST_TAG=$(git describe --abbrev=0 --tags)
