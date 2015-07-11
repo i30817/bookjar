@@ -20,7 +20,7 @@ PATCH=`echo "$COMMITS" | wc -l`
 CURRENT="${LAST_TAG}.${PATCH}"
 DISTRO=$(lsb_release -cs)
 RELEASE_DATE=$(date --rfc-2822)
-echo "bookjar (${CURRENT}) ${DISTRO}; urgency=low\n${COMMITS}\n -- i30817 <i30817@gmail.com>  ${RELEASE_DATE}\n\n" >> debian/changelog
+echo "bookjar (${CURRENT}) ${DISTRO}; urgency=low\n${COMMITS}\n -- i30817 <i30817@gmail.com>  ${RELEASE_DATE}" >> debian/changelog
 
 #bz the whole source for the ppa, minus build and dist dirs
 tar -cjf ../bookjar_${CURRENT}.orig.tar.bz2 --exclude='*build' --exclude='*dist' --exclude-vcs *
