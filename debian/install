@@ -1,2 +1,2 @@
 src/i3/ui/bookjar.png usr/share/icons/
-bookjar.desktop usr/share/applications/
+debian/bookjar.desktop usr/share/applications/
