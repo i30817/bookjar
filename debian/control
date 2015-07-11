@@ -3,7 +3,7 @@ Section: text
 Priority: optional
 Maintainer: i30817 <i30817@gmail.com>
 Build-Depends: default-jdk, ant, debhelper (>= 7.0.50), javahelper (>=0.32~)
-Standards-Version: 3.9.3
+Standards-Version: 3.9.6
 
 Package: bookjar
 Architecture: any
