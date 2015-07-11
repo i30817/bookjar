@@ -59,13 +59,14 @@ public class FullScreenFrame extends javax.swing.JFrame implements Externalizabl
                 String output = IoUtils.toString(proc.getInputStream(), true);
                 String[] results = output.split("=");
                 if (proc.waitFor() == 0 && results.length == 2) {
-                    //first window
+                    //GNOME WM seems to dislike not being the one to make sure 
+                    //windows don't overlap System panels 
+                    //(non-zero origin fake fullscreen gets a grey screen)
+                    //set x and y to 0 to make it happy
                     String[] firstWindowProperties = results[1].split(",");
-                    int x = Integer.parseInt(firstWindowProperties[0].trim());
-                    int y = Integer.parseInt(firstWindowProperties[1].trim());
                     int width = Integer.parseInt(firstWindowProperties[2].trim());
                     int height = Integer.parseInt(firstWindowProperties[3].trim());
-                    return new Rectangle(x, y, width, height);
+                    return new Rectangle(0, 0, width, height);
                 }
             } catch (IOException | InterruptedException | NumberFormatException ex) {
                 ex.printStackTrace();
@@ -78,8 +79,6 @@ public class FullScreenFrame extends javax.swing.JFrame implements Externalizabl
     private Rectangle getNormalAdequateSize() throws HeadlessException {
         Insets i = getToolkit().getScreenInsets(getGraphicsConfiguration());
         Rectangle max = new Rectangle(getToolkit().getScreenSize());
-        max.x += i.left;
-        max.y += i.top;
         max.width -= (i.left + i.right);
         max.height -= (i.top + i.bottom);
         return max;
