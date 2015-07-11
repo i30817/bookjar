@@ -10,8 +10,9 @@
 # https://github.com/vaab/gitchangelog/blob/master/gitchangelog.rc.reference
 
 #$1 is the major-minor version;
-#ignore if tag already exists otherwise create a release commit and set the tag
-( git tag | grep -q "$1" ) || ( git tag -a $1 -m "release $1" )
+#ignore if tag already exists otherwise create and push it
+( git tag | grep -q "$1" ) || ( git tag -a $1 -m "release $1"; git push origin $1 )
+
 
 #TODO use gitchangelog when it can generate debian/changelogs
 LAST_TAG=$(git describe --abbrev=0 --tags)
@@ -20,7 +21,7 @@ PATCH=`echo "$COMMITS" | wc -l`
 CURRENT="${LAST_TAG}.${PATCH}"
 DISTRO=$(lsb_release -cs)
 RELEASE_DATE=$(date --rfc-2822)
-echo "bookjar (${CURRENT}) ${DISTRO}; urgency=low\n${COMMITS}\n -- i30817 <i30817@gmail.com>  ${RELEASE_DATE}" >> debian/changelog
+echo "bookjar (${CURRENT}) ${DISTRO}; urgency=low\n${COMMITS}\n -- i30817 (launchpad key) <i30817@gmail.com>  ${RELEASE_DATE}" > debian/changelog
 
 #bz the whole source for the ppa, minus build and dist dirs
 tar -cjf ../bookjar_${CURRENT}.orig.tar.bz2 --exclude='*build' --exclude='*dist' --exclude-vcs *
