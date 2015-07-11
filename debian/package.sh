@@ -1,21 +1,35 @@
 #!/bin/sh -e
-#$1 is the major-minor-version;
+
+#This is a upload script only. 
+#The project file builds the project locally and then uploads it to the ppa. 
+#No building is done remotely (because it would be massively inconvenient)
+#Needs git, tar, debuild, dput + project build deps installed.
+
+#use this commit message metalanguage in the hope i can use the 
+#project in the future (it has no debian template yet): 
+# https://github.com/vaab/gitchangelog/blob/master/gitchangelog.rc.reference
+
+#$1 is the major-minor version;
 #ignore if tag already exists otherwise create a release commit and set the tag
-( hg tags | grep -q "$1 " ) || ( echo $1 > debian/RELEASE && hg commit -m "release $1" --addremove debian/RELEASE && hg tag $1 )
+( git tag | grep -q "$1" ) || ( git tag -a $1 -m "release $1" )
 
-#create a change-log file using the repository tags (only major versions)
-hg log --style debian/log_pattern > debian/changelog
-
-#get the last complete version from the created log file
-MAJOR_MINOR_FIX=$(head -1 debian/changelog | sed  's/[^(]*(\([^)]*\)).*/\1/g')
+#TODO use gitchangelog when it can generate debian/changelogs
+LAST_TAG=$(git describe --abbrev=0 --tags)
+COMMITS=$(git log ${LAST_TAG}..HEAD --no-merges --pretty=format:'  * %s')
+PATCH=`echo "$COMMITS" | wc -l`
+CURRENT="${LAST_TAG}.${PATCH}"
+DISTRO=$(lsb_release -cs)
+RELEASE_DATE=$(date --rfc-2822)
+echo "bookjar (${CURRENT}) ${DISTRO}; urgency=low\n${COMMITS}\n -- i30817 <i30817@gmail.com>  ${RELEASE_DATE}\n\n" >> debian/changelog
 
 #bz the whole source for the ppa, minus build and dist dirs
-tar -cjf ../bookjar_${MAJOR_MINOR_FIX}.orig.tar.bz2 --exclude='*build' --exclude='*dist' --exclude-vcs *
+tar -cjf ../bookjar_${CURRENT}.orig.tar.bz2 --exclude='*build' --exclude='*dist' --exclude-vcs *
 
 # Note: your .gnupg/gpg.conf must have the no-tty and batch options,
 # otherwise debuild will fail (because it will call gpg, which will
 # try to open a tty). This happens running from a ide
 
+#this is not the real key but a key id. It will ask for the real key to verify
 debuild -S -kC81E6C93
-dput ppa:i30817/bookjar ../bookjar_${MAJOR_MINOR_FIX}_source.changes
-rm ../bookjar_${MAJOR_MINOR_FIX}*
+dput ppa:i30817/bookjar ../bookjar_${CURRENT}_source.changes
+rm ../bookjar_${CURRENT}*

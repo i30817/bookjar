@@ -66,7 +66,7 @@
 
         <exec executable="debian/package.sh" failonerror="true" >
             <!--change this minor version when you are ready do do a release-->
-            <arg value="1.8" />
+            <arg value="1.9" />
         </exec>
     </target>
 
