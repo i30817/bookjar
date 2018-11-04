@@ -54,7 +54,7 @@ import javax.swing.KeyStroke;
 import javax.swing.UIManager;
 import i3.notifications.center.NotificationCenterManager;
 import org.openide.util.NbBundle;
-import org.openide.util.Utilities;
+import org.openide.util.BaseUtilities;
 
 /**
  *
@@ -141,7 +141,7 @@ public class Utils {
 
     public static Color getComboBorderColor() {
         Color shadow = UIManager.getColor(
-                Utilities.isWindows() ? "Nb.ScrollPane.Border.color" : "TextField.shadow"); //NOI18N
+                BaseUtilities.isWindows() ? "Nb.ScrollPane.Border.color" : "TextField.shadow"); //NOI18N
         return shadow != null ? shadow : getPopupBorderColor();
     }
 

@@ -18,13 +18,17 @@ import org.apache.logging.log4j.core.config.Configurator;
  * The class that starts it all, and has a few hacks too.
  */
 public class Bookjar implements Runnable {
+    
+    public static void main(final String[] args) throws Exception {
+        new Bookjar();
+    }
 
     public static Path programLocation;
     private final Path programStateLocation;
 
     public Bookjar() {
         //First shutdown hook of the app to be added after the system/native ones
-        Runtime.getRuntime().addShutdownHook(new Thread(new SaveRunnable()));
+        IoUtils.addShutdownHook(new SaveRunnable());
         programLocation = getProgramLocation();
         programStateLocation = programLocation.resolve("bookjarstate.bin");
         //can only start to write to file after having the program location

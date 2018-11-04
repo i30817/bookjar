@@ -2,7 +2,6 @@ package i3.gutenberg;
 
 import i3.download.DownloadState;
 import i3.download.DownloadView;
-import i3.io.IoUtils;
 import i3.main.GutenbergBook;
 import i3.main.Library;
 import i3.main.LocalBook;
@@ -134,7 +133,7 @@ public class GutenbergDownloadView extends DownloadView<GutenbergBook> {
         }
 
         Path gutenbergDir = Library.fromLibrary("project_gutenberg");
-        Path fileToRead = IoUtils.getSafeFileSystemFile(gutenbergDir, value.getFileName(" & ", " - "));
+        Path fileToRead = gutenbergDir.resolve(value.getFileName(" & ", " - "));
         String language = value.getFirstLanguage();
         //first create, THEN move (so that the file watchdog doesn't mess metadata)
         LocalBook book = Application.app.getLibraryView().createIfAbsent(fileToRead, language, true);

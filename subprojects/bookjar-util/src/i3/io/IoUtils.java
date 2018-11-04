@@ -1,7 +1,6 @@
 package i3.io;
 
 import i3.util.Factory;
-import i3.util.Strings;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.Closeable;
@@ -44,51 +43,6 @@ import org.mozilla.universalchardet.UniversalDetector;
 public final class IoUtils {
 
     private IoUtils() {
-    }
-    private static Pattern whiteList = Pattern.compile("[^\\p{L}&&[^\\p{Digit}&-.\\[\\]]]", Pattern.CANON_EQ | Pattern.UNICODE_CASE);
-
-    /**
-     * Returns a smaller than 256 chars file with all characters except the
-     * alphanumerics and whitespace and some others turned to whitespace
-     * (escapes illegal chars in all platforms). This method assumes the parent
-     * is safe, ie, it has no illegal character in the file name, is less than
-     * 256 chars, exists and can be written as a directory.
-     *
-     * @param parent not null, writable
-     * @param name
-     * @return
-     */
-    public static Path getSafeFileSystemFile(Path parent, String name) {
-
-        String parentPath = parent.toAbsolutePath().normalize().toString();
-        String childPath = whiteList.matcher(name).replaceAll(" ");
-
-        //-1 is seperator
-        int maxLen = 255 - parentPath.length() - 1;
-
-        if (childPath.length() > maxLen) {
-            String extension = Strings.subStringFromLast(childPath, '.');
-            maxLen -= extension.length();
-
-            int i = maxLen - 1;
-            while (childPath.charAt(i) != ' ' && i > 0) {
-                i--;
-            }
-
-            while (childPath.charAt(i) == ' ' && i > 0) {
-                i--;
-            }
-
-            if (i == 0) {
-                childPath = childPath.substring(0, maxLen - 1);
-            } else {
-                childPath = childPath.substring(0, i + 1);
-            }
-
-            return Paths.get(parentPath, childPath + extension);
-        }
-        return Paths.get(parentPath, childPath);
-
     }
 
     /**
@@ -256,8 +210,6 @@ public final class IoUtils {
         @Override
         public void run() {
             try {
-                //allow the other shutdown hooks to start
-                Thread.sleep(100);
                 Thread[] tds = new Thread[Thread.activeCount()];
                 int var = Thread.enumerate(tds);
                 //wait for shutdown hooks made by IoUtils.addShutdownHook
@@ -312,12 +264,7 @@ public final class IoUtils {
         l.addAll(Arrays.asList(args));
         l.add(klass.getCanonicalName());
         ProcessBuilder pb = new ProcessBuilder(l);
-        pb.redirectErrorStream(true);
         final Process p = pb.start();
-        //process builder stupidity (would need 2 threads if redirectErrorStream(false))
-        Thread t = new Thread(new ProcessStreamConsumer(p), "ProcessBuilderInputStreamConsumer");
-        t.setDaemon(true);
-        t.start();
         return p;
     }
 

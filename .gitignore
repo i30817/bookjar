@@ -22,3 +22,4 @@
 /debian/bookjar.substvars
 /debian/bookjar.postrm.debhelper
 /debian/bookjar.debhelper.log
+/subprojects/bookjar-notifications/nbproject/private/

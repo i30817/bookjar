@@ -57,7 +57,7 @@ public final class WriteImageToCache {
         //strip extensions not to confuse filemanagers
         int last = key.lastIndexOf('.');
         String imageName = last == -1 ? key : key.substring(0, last);
-        Path cached = IoUtils.getSafeFileSystemFile(imagesDir, imageName);
+        Path cached = imagesDir.resolve(imageName);
         try {
             ImageIO.write(arg, format, cached.toFile());
         } catch (IOException t) {

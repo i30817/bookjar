@@ -4,6 +4,7 @@ import i3.download.Download;
 import i3.download.DownloadException;
 import i3.download.DownloadState;
 import i3.download.DownloadView;
+import java.awt.AWTPermission;
 import java.awt.Desktop;
 import java.awt.Point;
 import java.awt.Toolkit;
@@ -314,7 +315,7 @@ public class DownloadsList<E> implements Observer {
             SecurityManager sm = System.getSecurityManager();
             if (sm != null) {
                 try {
-                    sm.checkSystemClipboardAccess();
+                    sm.checkPermission(new AWTPermission("accessClipboard"));
                 } catch (Exception ex) {
                     return;
                 }

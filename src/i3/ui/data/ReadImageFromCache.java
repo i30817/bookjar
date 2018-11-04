@@ -6,7 +6,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import javax.imageio.ImageIO;
 import i3.main.Bookjar;
-import i3.io.IoUtils;
 import org.apache.logging.log4j.LogManager;
 
 /**
@@ -33,7 +32,7 @@ public class ReadImageFromCache {
         //strip extensions not to confuse filemanagers
         int last = key.lastIndexOf('.');
         String imageName = last == -1 ? key : key.substring(0, last);
-        Path cached = IoUtils.getSafeFileSystemFile(imagesDir, imageName);
+        Path cached = imagesDir.resolve(imageName);
         try {
             if (Files.exists(cached)) {
                 return ImageIO.read(cached.toFile());
